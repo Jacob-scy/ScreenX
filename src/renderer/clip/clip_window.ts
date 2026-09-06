@@ -910,9 +910,14 @@ async function translate() {
 
 // 复制
 async function runCopy() {
+    console.log("[SCREENSHOT_COPY] Triggered");
     const c = getClipPhoto();
+    console.log(`[SCREENSHOT_RESULT] width=${c.width} height=${c.height}`);
     const blob = await getBlob(c, "image/png");
-    if (blob) await writeImage(blob);
+    if (blob) {
+        await writeImage(blob);
+        console.log("[SCREENSHOT_COMPLETE] Successfully written to clipboard");
+    }
     toolsX.close.f();
 }
 // 保存
@@ -1003,6 +1008,10 @@ async function save(message: string) {
 
     fs.writeFile(message, dataBuffer, (err: Error | null) => {
         if (!err) {
+            console.log(
+                `[SCREENSHOT_SAVE] File written to ${message} (${dataBuffer.length} bytes)`,
+            );
+            console.log("[SCREENSHOT_COMPLETE] Successfully saved to disk");
             renderSend("ok_save", [message]);
             toolsX.close.f();
         } else {
@@ -1174,6 +1183,9 @@ function pointsOutRect(points: point[]) {
 // 开始操纵框选
 function clipStart(e: MouseEvent, inRect: boolean) {
     const p = src2pXY(e2srcPoint(e));
+    console.log(
+        `[SCREENSHOT_MOUSE_DOWN] client=[${e.clientX},${e.clientY}] physical=[${p.x},${p.y}] inRect=${inRect}`,
+    );
     if (isRect) {
         // 在选区内，则调整，否则新建
         if (inRect) {
@@ -1263,6 +1275,13 @@ function clipEnd(e: MouseEvent) {
         freeSelect.push(p);
         finalRect = pointsOutRect(freeSelect);
     }
+    console.log(
+        `[SCREENSHOT_MOUSE_UP] client=[${e.clientX},${e.clientY}] physical=[${p.x},${p.y}]`,
+    );
+    console.log(
+        `[SCREENSHOT_SELECTION] finalRect=[${finalRect.join(",")}] isRect=${isRect}`,
+    );
+    console.log(`[SCREENSHOT_CROP] physical=[${finalRect.join(",")}]`);
     renderClip(e);
     hisPush();
 }
@@ -3667,7 +3686,11 @@ let willFilter: EditType["filter"] | "" = "";
 
 document.body.style.opacity = "0";
 
-renderOn("clip_init", async ([_displays, imgBuffer, mainid, act]) => {
+renderOn("clip_init", async ([_displays, imgBuffer, mainid, act, reqId]) => {
+    const requestId = reqId || "unknown";
+    console.log(
+        `[SCREENSHOT_IMAGE_INJECT] requestId=${requestId} bufferLength=${imgBuffer?.length || 0}`,
+    );
     const wx = await screenShots(_displays, imgBuffer); // 只是截屏 也可能是小图片
     allScreens = wx.screen;
     const mainId = mainid;
@@ -3677,40 +3700,27 @@ renderOn("clip_init", async ([_displays, imgBuffer, mainid, act]) => {
         w.rect.y -= i.bounds?.y ?? 0;
         return w;
     });
-    console.log(allScreens, windows);
     await setScreen(i);
     const nowScreen = _displays.find((i) => i.id === mainId) || _displays[0]; // 非截屏，是屏幕
     const xy = { x: 0, y: 0 };
     if (wx.type === "normal") {
         zoomW = i.size.width;
-        ratio = i.scaleFactor;
+        ratio = i.scaleFactor || 1;
     } else if (wx.type === "command") {
         const x = store.get("自定义屏幕属性");
         const s = x.find((i) => i.id === mainId);
         zoomW = i.size.width;
         if (s) ratio = s.scaleFactor;
         else ratio = nowScreen.scaleFactor;
-    } else if (wx.type === "img")
-        if (
-            i.size.width < nowScreen.size.width ||
-            i.size.height < nowScreen.size.height
-        ) {
-            const x =
-                (nowScreen.size.width * window.devicePixelRatio) / 2 -
-                i.size.width / 2;
-            const y =
-                (nowScreen.size.height * window.devicePixelRatio) / 2 -
-                i.size.height / 2;
-            xy.x = x;
-            xy.y = y;
-            zoomW = i.size.width;
-            ratio = devicePixelRatio;
-        }
+    } else if (wx.type === "img") {
+        zoomW = i.size.width;
+        ratio = i.scaleFactor || window.devicePixelRatio || 1;
+    }
     setEditorP(1 / ratio, 0, 0);
 
     document.body.style.opacity = "1";
     console.log(
-        "[SCREENSHOT_WINDOW_READY] Clip overlay DOM is fully ready and visible",
+        `[SCREENSHOT_WINDOW_READY] requestId=${requestId} canvas=${mainCanvas.width}x${mainCanvas.height} ratio=${ratio} zoom=${editorP.zoom}`,
     );
 
     renderSend("clip_show", []);

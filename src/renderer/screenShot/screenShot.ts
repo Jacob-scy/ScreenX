@@ -166,13 +166,21 @@ async function dispaly2screen(
         const data = toCanvas(buffer);
         const image = data.image;
         const s = image.getSize();
+        const primary = displays?.[0];
+        const sf = primary?.scaleFactor || window.devicePixelRatio || 1;
+        const b = primary?.bounds || {
+            x: 0,
+            y: 0,
+            width: Math.round(s.width / sf),
+            height: Math.round(s.height / sf),
+        };
         return {
             screen: [
                 {
-                    bounds: { x: 0, y: 0, width: s.width, height: s.height },
-                    size: { width: s.width, height: s.height },
-                    scaleFactor: 1,
-                    id: -1,
+                    bounds: b,
+                    size: { width: b.width, height: b.height },
+                    scaleFactor: sf,
+                    id: primary?.id ?? 0,
                     capture: async () => ({
                         toImageData: () => data.data,
                         toNativeImage: () => data.image,
@@ -180,7 +188,7 @@ async function dispaly2screen(
                 },
             ],
             window: [],
-            type: "img",
+            type: "normal",
         };
     }
 

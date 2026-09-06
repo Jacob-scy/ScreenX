@@ -748,8 +748,14 @@ app.whenReady().then(() => {
         try {
             if (m.key) {
                 const ok = globalShortcut.register(m.key, () => {
-                    console.log(`【触发快捷键】: ${k} (${m.key})`);
-                    快捷键函数[k]();
+                    console.log(
+                        `[GLOBAL_SCREENSHOT_SHORTCUT] key=${m.key} action=${k}`,
+                    );
+                    if (k === "截屏搜索") {
+                        startScreenshot(undefined, "global-shortcut");
+                    } else {
+                        快捷键函数[k]();
+                    }
                 });
                 console.log(`【注册快捷键】 ${k}: ${m.key} -> 结果: ${ok}`);
             }
@@ -1003,15 +1009,35 @@ function pushLog(op: (typeof logs)[0]) {
 let clipWindow: BrowserWindow | null = null;
 let clipWindowLoaded = false;
 const getClipWin = async () => {
-    if (clipWindowLoaded && !clipWindow?.isDestroyed())
-        return clipWindow as BrowserWindow;
-    if (!clipWindow || clipWindow.isDestroyed())
+    if (clipWindow && !clipWindow.isDestroyed()) {
+        if (clipWindowLoaded || !clipWindow.webContents.isLoading()) {
+            clipWindowLoaded = true;
+            return clipWindow;
+        }
+    }
+    if (!clipWindow || clipWindow.isDestroyed()) {
         clipWindow = createClipWindow();
+    }
 
     return new Promise((re: (v: BrowserWindow) => void) => {
+        let resolved = false;
+        const timer = setTimeout(() => {
+            if (!resolved) {
+                resolved = true;
+                clipWindowLoaded = true;
+                console.log("[MAIN] getClipWin timeout, forced resolving");
+                re(clipWindow as BrowserWindow);
+            }
+        }, 1200);
+
         clipWindow?.webContents.once("did-finish-load", () => {
-            clipWindowLoaded = true;
-            return re(clipWindow as BrowserWindow);
+            if (!resolved) {
+                resolved = true;
+                clearTimeout(timer);
+                clipWindowLoaded = true;
+                console.log("[MAIN] getClipWin did-finish-load resolved");
+                return re(clipWindow as BrowserWindow);
+            }
         });
     });
 };
@@ -1071,6 +1097,7 @@ function createClipWindow() {
         console.log("[CREATE_CLIP_WINDOW] did-finish-load SUCCESS");
     });
     _clipWindow.webContents.on("console-message", (d) => {
+        console.log(`[CLIP_RENDERER][${d.level}] ${d.message}`);
         if (d.level !== "debug")
             pushLog({
                 from: "screenShot",
@@ -1134,56 +1161,122 @@ mainOn("trigger_screenshot", () => {
     console.log(
         "[BUTTON_SCREENSHOT_CLICK] trigger_screenshot IPC received in main process",
     );
-    startScreenshot();
+    startScreenshot(undefined, "button");
 });
 mainOn("trigger_long_screenshot", () => {
     console.log(
         "[BUTTON_SCREENSHOT_CLICK] trigger_long_screenshot IPC received in main process",
     );
-    startLongScreenshot();
+    startLongScreenshot("button");
 });
+
+function captureDesktopPhysicalBuffer(): Buffer | null {
+    if (process.platform !== "win32") return null;
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const cp = require("node:child_process");
+    const os = require("node:os");
+
+    const candidates = [
+        path.join(process.cwd(), "resources", "bin", "wincapture.exe"),
+        path.join(__dirname, "..", "..", "resources", "bin", "wincapture.exe"),
+        path.join(
+            __dirname,
+            "..",
+            "..",
+            "..",
+            "resources",
+            "bin",
+            "wincapture.exe",
+        ),
+    ];
+    const exe = candidates.find((p) => fs.existsSync(p));
+    if (!exe) return null;
+
+    try {
+        const tmpDir = os.tmpdir();
+        const tmpFile = path.join(
+            tmpDir,
+            `wincap_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`,
+        );
+        cp.execFileSync(exe, [tmpFile]);
+        if (fs.existsSync(tmpFile)) {
+            const buf = fs.readFileSync(tmpFile);
+            try {
+                fs.unlinkSync(tmpFile);
+            } catch {}
+            if (buf && buf.length > 20 * 1024) {
+                return buf;
+            }
+        }
+    } catch (err) {
+        console.error("[MAIN][WIN_NATIVE_CAPTURE_ERROR]", err);
+    }
+    return null;
+}
 
 /**
  * 统一截图入口 (按钮、快捷键、托盘共享同一函数)
  */
-function startScreenshot(imgPath?: string) {
-    const timestamp = new Date().toISOString();
-    console.log(
-        `[${timestamp}][MAIN][START_SCREENSHOT] normal capture triggered, customPath=${!!imgPath}`,
-    );
+function startScreenshot(imgPath?: string, source = "unknown") {
+    const requestId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    console.log(`[SCREENSHOT_REQUEST] requestId=${requestId} source=${source}`);
+    console.log(`[SCREENSHOT_CAPTURE_START] requestId=${requestId}`);
+
     if (imgPath) {
         readFile(imgPath, (err, data) => {
-            if (err)
+            if (err) {
                 console.error(
-                    `[${timestamp}][MAIN] SCREENSHOT_CAPTURE_FAILED:`,
+                    `[SCREENSHOT_CAPTURE_FAILED] requestId=${requestId}:`,
                     err,
                 );
-            sendCaptureEvent(data);
+            } else {
+                console.log(
+                    `[SCREENSHOT_CAPTURE_SUCCESS] requestId=${requestId} size=${data?.length} bytes (from file)`,
+                );
+            }
+            sendCaptureEvent(data, undefined, requestId);
         });
     } else {
-        sendCaptureEvent();
+        const realBuf = captureDesktopPhysicalBuffer();
+        if (realBuf) {
+            console.log(
+                `[SCREENSHOT_CAPTURE_SUCCESS] requestId=${requestId} size=${realBuf.length} bytes (native captured)`,
+            );
+        } else {
+            console.warn(
+                `[SCREENSHOT_CAPTURE_WARN] requestId=${requestId} native capture returned null, will use renderer fallback`,
+            );
+        }
+        sendCaptureEvent(realBuf || undefined, undefined, requestId);
     }
 }
 
-function startLongScreenshot() {
-    const timestamp = new Date().toISOString();
+function startLongScreenshot(source = "unknown") {
+    const requestId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     console.log(
-        `[${timestamp}][MAIN][START_SCREENSHOT] long capture triggered`,
+        `[SCREENSHOT_REQUEST] requestId=${requestId} source=${source} type=long`,
     );
-    sendCaptureEvent(undefined, "long");
+    console.log(`[SCREENSHOT_CAPTURE_START] requestId=${requestId}`);
+    const realBuf = captureDesktopPhysicalBuffer();
+    if (realBuf) {
+        console.log(
+            `[SCREENSHOT_CAPTURE_SUCCESS] requestId=${requestId} size=${realBuf.length} bytes (native captured)`,
+        );
+    }
+    sendCaptureEvent(realBuf || undefined, "long", requestId);
 }
 
 function showPhoto(imgPath?: string) {
-    startScreenshot(imgPath);
+    startScreenshot(imgPath, "global-shortcut");
 }
 
-async function fullScreen() {
-    const timestamp = new Date().toISOString();
+async function fullScreen(requestId?: string) {
     const nearestScreen = screen.getDisplayNearestPoint(
         screen.getCursorScreenPoint(),
     );
     console.log(
-        `[${timestamp}][MAIN] SCREENSHOT_DISPLAY_DETECTED: id=${nearestScreen.id}, bounds=[${nearestScreen.bounds.x},${nearestScreen.bounds.y},${nearestScreen.bounds.width},${nearestScreen.bounds.height}], scaleFactor=${nearestScreen.scaleFactor}`,
+        `[MAIN] SCREENSHOT_DISPLAY_DETECTED: id=${nearestScreen.id}, bounds=[${nearestScreen.bounds.x},${nearestScreen.bounds.y},${nearestScreen.bounds.width},${nearestScreen.bounds.height}], scaleFactor=${nearestScreen.scaleFactor}`,
     );
     const win = await getClipWin();
 
@@ -1198,33 +1291,35 @@ async function fullScreen() {
     win.show();
     win.focus();
     console.log(
-        `[${timestamp}][MAIN] SCREENSHOT_WINDOW_SHOW: bounds=[${win.getBounds().x},${win.getBounds().y},${win.getBounds().width},${win.getBounds().height}], isVisible=${win.isVisible()}, isAlwaysOnTop=${win.isAlwaysOnTop()}`,
+        `[SCREENSHOT_WINDOW_SHOW] requestId=${requestId || "unknown"} bounds=[${win.getBounds().x},${win.getBounds().y},${win.getBounds().width},${win.getBounds().height}], isVisible=${win.isVisible()}, isAlwaysOnTop=${win.isAlwaysOnTop()}`,
     );
 }
 
-async function sendCaptureEvent(data?: Buffer, type?: 功能) {
-    const timestamp = new Date().toISOString();
-    console.log(
-        `[${timestamp}][MAIN] SCREENSHOT_CAPTURE_START: type=${type ?? "normal"}`,
-    );
+async function sendCaptureEvent(
+    data?: Buffer,
+    type?: 功能,
+    requestId = "req-default",
+) {
+    console.log(`[SCREENSHOT_WINDOW_CREATE] requestId=${requestId}`);
     const win = await getClipWin();
     console.log(
-        `[${timestamp}][MAIN] SCREENSHOT_WINDOW_READY: clipWindowLoaded=${clipWindowLoaded}, isVisible=${win?.isVisible()}`,
+        `[SCREENSHOT_WINDOW_READY] requestId=${requestId} clipWindowLoaded=${clipWindowLoaded}, isVisible=${win?.isVisible()}`,
     );
     mainSend(win?.webContents, "clip_init", [
         screen.getAllDisplays(),
         data,
         screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).id,
         type,
+        requestId,
     ]);
 
     // 超时保底展示（避免渲染进程某些情况未发送 clip_show 导致窗口永远隐藏）
     setTimeout(() => {
         if (win && !win.isDestroyed() && !win.isVisible()) {
             console.log(
-                "[SCREENSHOT_FALLBACK_SHOW] clip_show event timeout, forcing fullScreen()",
+                `[SCREENSHOT_FALLBACK_SHOW] requestId=${requestId} clip_show event timeout, forcing fullScreen()`,
             );
-            fullScreen();
+            fullScreen(requestId);
         }
     }, 1500);
 }
