@@ -288,19 +288,10 @@ const fanyiqi = new Map(
 const showCang = store.get("翻译.收藏");
 
 const allFromLan = Array.from(
-    new Set(
-        fyq.flatMap(
-            (f) => xtranslator.e[f.type === "llm" ? "chatgpt" : f.type]?.lan,
-        ),
-    ),
+    new Set(fyq.flatMap((f) => xtranslator.e[f.type]?.lan)),
 );
 const allToLan = Array.from(
-    new Set(
-        fyq.flatMap(
-            (f) =>
-                xtranslator.e[f.type === "llm" ? "chatgpt" : f.type]?.targetLan,
-        ),
-    ),
+    new Set(fyq.flatMap((f) => xtranslator.e[f.type]?.targetLan)),
 );
 
 console.log("allFromLan", allFromLan);

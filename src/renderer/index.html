@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screenshot Personal Edition</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            border: 1px solid #334155;
+        }
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        p.desc {
+            color: #94a3b8;
+            margin: 0 0 24px 0;
+            font-size: 14px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        a.card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            padding: 16px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #f8fafc;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        a.card:hover {
+            border-color: #38bdf8;
+            transform: translateY(-2px);
+            background: #1e293b;
+        }
+        .card-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: #e2e8f0;
+        }
+        .card-sub {
+            font-size: 12px;
+            color: #64748b;
+        }
+        .shortcuts {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid #334155;
+        }
+        .shortcuts-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 4px 0;
+            border-bottom: 1px solid #1e293b;
+        }
+        .row:last-child {
+            border-bottom: none;
+        }
+        kbd {
+            background: #334155;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #38bdf8;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 Screenshot Personal Edition</h1>
+        <p class="desc">极简桌面截图、本地离线 OCR 与贴图工具</p>
+        
+        <div class="grid">
+            <a class="card" href="/capture.html">
+                <span class="card-title">截屏界面</span>
+                <span class="card-sub">/capture.html</span>
+            </a>
+            <a class="card" href="/editor.html">
+                <span class="card-title">文字识别与编辑主页</span>
+                <span class="card-sub">/editor.html</span>
+            </a>
+            <a class="card" href="/setting.html">
+                <span class="card-title">设置中心</span>
+                <span class="card-sub">/setting.html</span>
+            </a>
+            <a class="card" href="/ding.html">
+                <span class="card-title">桌面贴图 (Pin)</span>
+                <span class="card-sub">/ding.html</span>
+            </a>
+        </div>
+
+        <div class="shortcuts">
+            <div class="shortcuts-title">全局快捷键速查</div>
+            <div class="row"><span>截图 / 标注</span><kbd>Alt + C</kbd></div>
+            <div class="row"><span>万向滚动截图</span><kbd>Alt + Shift + L</kbd></div>
+            <div class="row"><span>文字识别 (OCR)</span><kbd>Alt + V</kbd></div>
+            <div class="row"><span>剪贴板贴图</span><kbd>Alt + B</kbd></div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# NOTICE / ATTRIBUTION
+
+## Project Notice
+Screenshot Personal Edition (本项目) 是基于开源项目 [xushengfeng/eSearch](https://github.com/xushengfeng/eSearch) 的个人定制派生与架构重构版本。
+
+- 原始项目作者: xsf (xushengfeng_zg@163.com)
+- 原始项目仓库: https://github.com/xushengfeng/eSearch
+- 原始许可证: GNU General Public License v3.0 (GPL-3.0)
+
+## Copyright & License Notice
+本项目严格遵守 GPL-3.0 许可证条款：
+1. 完整保留原项目许可证文件 `LICENSE`。
+2. 完整保留原项目核心算法及创作者署名。
+3. 本项目所作修改旨在针对个人 Windows 桌面使用场景进行深度精简、依赖清理与架构重构，专注于截图、离线 OCR、搜索、翻译、贴图与万向滚动截图等核心工作流。

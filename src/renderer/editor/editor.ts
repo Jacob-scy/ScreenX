@@ -17,7 +17,14 @@ import {
     view,
 } from "dkh-ui";
 import hotkeys from "hotkeys-js";
-import { tLog } from "xtimelog";
+class tLog {
+    _title?: string;
+    constructor(_title?: string) {
+        this._title = _title;
+    }
+    l(_msg: string, _time?: number) {}
+    clear() {}
+}
 import openWith from "../../../lib/open_with";
 import store from "../../../lib/store/renderStore";
 import time_format from "../../../lib/time_format";
@@ -63,10 +70,8 @@ import { safeJSONParse, tryD, tryx, typedEntries } from "../../../lib/utils";
 import type { IconType } from "../../iconTypes";
 import closeSvg from "../assets/icons/close.svg";
 import reloadSvg from "../assets/icons/reload.svg";
-import { runAI } from "../lib/ai";
 import { defaultOcrId, loadOCR } from "../ocr/ocr";
 import { ocrList } from "../ocr/ocr_omni";
-import { ocrOnline } from "../ocr/ocr_online";
 
 type SpellItem = {
     index: number;
@@ -92,8 +97,8 @@ let lineHeight = 24;
 let windowName = 0;
 let mainText = "";
 const 自动搜索 = store.get("自动搜索");
-const 自动打开链接 = store.get("自动打开链接");
-const 自动搜索中文占比 = store.get("自动搜索中文占比");
+const 自动打开链接 = false;
+const 自动搜索中文占比 = 0.5;
 
 let editBarS = false;
 let isWrap = !store.get("编辑器.自动换行");
@@ -127,7 +132,7 @@ const locr: {
     type: "",
 };
 
-const 浏览器打开 = store.get("浏览器中打开");
+const 浏览器打开 = false;
 
 const 默认字体大小 = store.get("字体.大小");
 
@@ -142,6 +147,24 @@ function iconBEl(src: IconType, title: string) {
 }
 
 const nav = ele("nav");
+const navClipBtn = button(iconBEl("screen", "截屏 (Alt+C)")).on("click", () => {
+    renderSend("trigger_screenshot", []);
+});
+const navLongClipBtn = button(
+    iconBEl("long_clip", "万向滚动截图 (Alt+Shift+L)"),
+).on("click", () => {
+    renderSend("trigger_long_screenshot", []);
+});
+
+hotkeys("alt+c", (e) => {
+    e.preventDefault();
+    renderSend("trigger_screenshot", []);
+});
+hotkeys("alt+shift+l", (e) => {
+    e.preventDefault();
+    renderSend("trigger_long_screenshot", []);
+});
+
 const navTopSwitch = buttonSwitch(iconBEl("toptop", "窗口置顶"), (s) => {
     renderSend("windowTop", [s]);
 });
@@ -152,7 +175,13 @@ const navConciseSwitch = buttonSwitch(iconBEl("concise", "简洁模式"), (c) =>
     setConciseMode(c);
     store.set("主页面.简洁模式", c);
 });
-nav.add([navTopSwitch, navDingSwitch, navConciseSwitch]).addInto();
+nav.add([
+    navClipBtn,
+    navLongClipBtn,
+    navTopSwitch,
+    navDingSwitch,
+    navConciseSwitch,
+]).addInto();
 
 const editOnOtherEl = buttonSwitch(
     iconBEl("super_edit", "其他编辑器打开"),
@@ -424,34 +453,7 @@ const spellcheckEl = view("y")
     })
     .class(Class.transition, Class.gap);
 const spellcheckCancel = view().style({ flexShrink: 0 });
-const aiSpellCheckP = view("x").class(Class.group);
-view("x")
-    .class(Class.gap)
-    .add([aiSpellCheckP, spellcheckCancel])
-    .addInto(spellcheckEl);
-async function runAiSpellcheck() {
-    await spellcheckDiff.spellcheckAi();
-    const list = spellcheckDiff.updateDiffState();
-    renderSpellcheck(list);
-}
-iconBEl("ai_check", "AI拼写检查")
-    .on("click", async () => {
-        runAiSpellcheck();
-    })
-    .addInto(aiSpellCheckP);
-const aiModelList = store.get("AI.在线模型");
-const aiSpellCheckModel = select(
-    aiModelList.length === 0
-        ? [{ name: "无AI模型", value: "" }]
-        : aiModelList.map((i) => ({ name: noI18n(i.name), value: i.name })),
-)
-    .addInto(aiSpellCheckP)
-    .on("change", () => {
-        runAiSpellcheck();
-    });
-if (aiModelList.length === 0) {
-    aiSpellCheckModel.attr({ title: "请到设置添加在线模型" });
-}
+view("x").class(Class.gap).add([spellcheckCancel]).addInto(spellcheckEl);
 const spellcheckList = view("y")
     .style({ overflow: "scroll" })
     .addInto(spellcheckEl)
@@ -1445,57 +1447,6 @@ class spellcheckGen {
         return segments;
     }
 
-    async spellcheckAi() {
-        const t = editor.get();
-
-        const model = aiModelList;
-        if (model.length === 0) return;
-        const m =
-            model.find((i) => i.name === aiSpellCheckModel.gv) || model[0];
-
-        const ai = runAI(
-            [
-                {
-                    role: "user",
-                    content: {
-                        text: `这是一个OCR识别结果：\n>>>\n${t}\n\n>>>\n请更正其中的拼写错误，返回修改后的文本。不需要解释。`,
-                    },
-                },
-            ],
-            m,
-        );
-
-        const stopEl = view()
-            .attr({ title: "点击取消" })
-            .addInto(spellcheckCancel.clear())
-            .class(Class.click)
-            .on("click", () => {
-                ai.stop();
-                stopEl.remove();
-            })
-            .bindSet((v: number) => {
-                if (v === 1) stopEl.remove();
-                const p = v * 100;
-                stopEl.style({
-                    background: `conic-gradient(${cssColor.main} 0, ${cssColor.main} ${p}%, transparent ${p}%, transparent 100%)`,
-                    borderRadius: "50%",
-                    border: `1px solid ${cssColor.f}`,
-                    minWidth: cssVar("b-button"),
-                    minHeight: cssVar("b-button"),
-                });
-            });
-
-        ai.stream((te, e) => {
-            const p = e ? 1 : te.length / t.length;
-            console.log(p);
-            stopEl.sv(p);
-        });
-
-        const newT = await ai.text;
-        this.aiSuggestText = newT;
-        console.log(newT);
-    }
-
     // 应用建议或文本更新，但不重新检查计算
     updateDiffState() {
         const t = editor.get();
@@ -1876,24 +1827,6 @@ renderOn("editorInit", ([name, list]) => {
         showT(mainText, mainType);
     }
 
-    if (list.type === "image" && list.arg0) {
-        editor.push(`${t("图片上传中……")} ${t("请等候")}`);
-        searchImg(list.content, list.arg0, (err, url) => {
-            if (url) {
-                editor.push("");
-                openLink(url);
-                if (浏览器打开) {
-                    // 主页面作为临时上传图片的工具，应自动关闭，不管有没有设置自动关闭标签
-                    closeWindow();
-                }
-            }
-            if (err)
-                editor.push(
-                    `${t("上传错误")}\n${t("请打开开发者工具（Ctrl+Shift+I）查看详细错误")}`,
-                );
-        });
-    }
-
     if (list.type === "ocr" && list.arg0) {
         editor.push(`${t("文字识别中……")} ${t("请等候")}`);
         ocr(list.content, list.arg0, (err, r) => {
@@ -1946,17 +1879,6 @@ renderOn("editorInit", ([name, list]) => {
             }
 
             mainEvent("home");
-        });
-    }
-
-    if (list.type === "qr") {
-        editor.push(`${t("二维码识别中……")} ${t("请等候")}`);
-        import("qr-scanner-wechat").then(async (qr) => {
-            const img = new Image();
-            img.src = list.content;
-            const result = await qr.scan(img);
-            const text = result.text;
-            showT(text || "", mainType);
         });
     }
 });
@@ -2167,9 +2089,7 @@ function showTabs(b: "home" | "tab" | "hometab") {
         if (b) {
             for (const el of l) el.classList.add("tab_small");
         } else {
-            if (!store.get("浏览器.标签页.小")) {
-                for (const el of l) el.classList.remove("tab_small");
-            }
+            for (const el of l) el.classList.remove("tab_small");
         }
     }
     if (b === "tab") {
@@ -2253,13 +2173,6 @@ function newTab(id: number, url: string) {
         e.stopPropagation();
         closeTab(id);
     });
-
-    if (store.get("浏览器.标签页.小")) {
-        li.classList.add("tab_small");
-    }
-    if (store.get("浏览器.标签页.灰度")) {
-        li.classList.add("tab_gray");
-    }
 }
 
 function getTab(id: number): TabItem {
@@ -2368,10 +2281,8 @@ function mainEvent(eid: BrowserAction | "add_history" | "browser") {
 function openInBrowser() {
     const url = getTab(focusTabI).url;
     renderSend("openUrl", [url]);
-    if (store.get("浏览器.标签页.自动关闭")) {
-        closeTab(focusTabI);
-        if (isTabsEmpty() && editor.get().trim() === "") closeWindow();
-    }
+    closeTab(focusTabI);
+    if (isTabsEmpty() && editor.get().trim() === "") closeWindow();
 }
 
 renderOn("viewEvent", ([type]) => {
@@ -2522,23 +2433,14 @@ function google(
 
 function ocr(
     img: string,
-    type: (string & {}) | "baidu" | "youdao",
+    type: string,
     callback: (error: Error | null, result: OCROutPut | null) => void,
 ) {
     clearOcrPhoto();
     addOcrPhoto(img);
-    if (type === "baidu" || type === "youdao" || type.startsWith("ai-")) {
-        ocrOnline(
-            store,
-            type.startsWith("ai-") ? type.slice(3) : type,
-            img,
-            callback,
-        );
-    } else {
-        localOcr(type, img, (err, r) => {
-            callback(err, r);
-        });
-    }
+    localOcr(type, img, (err, r) => {
+        callback(err, r);
+    });
 }
 
 /**
@@ -2694,26 +2596,12 @@ function runOcr() {
     for (const [i, el] of ocrImageS) {
         el.textEl.clear();
         const index = count;
-        if (type === "baidu" || type === "youdao" || type.startsWith("ai-")) {
-            ocrOnline(
-                store,
-                type.startsWith("ai-") ? type.slice(3) : type,
-                el.src,
-                (_err, r) => {
-                    if (r) {
-                        addOcrText(r.raw, i, 0);
-                        addOcrToEditor(r, index);
-                    }
-                },
-            );
-        } else {
-            localOcr(type, el.src, (_err, r) => {
-                if (r) {
-                    addOcrText(r.raw, i, r.rotate);
-                    addOcrToEditor(r, index);
-                }
-            });
-        }
+        localOcr(type, el.src, (_err, r) => {
+            if (r) {
+                addOcrText(r.raw, i, r.rotate);
+                addOcrToEditor(r, index);
+            }
+        });
         count++;
     }
 

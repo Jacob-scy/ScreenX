@@ -40,10 +40,6 @@ const someSetting = {
             type: "yandex",
         },
     ],
-    "屏幕翻译.语言": {
-        from: "auto",
-        to: "zh-HANS",
-    },
     "贴图.强制鼠标穿透": "alt+x",
 };
 

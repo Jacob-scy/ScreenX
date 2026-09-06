@@ -9,7 +9,6 @@ import { t } from "../../../lib/translate/translate";
 import { writeImage, writeText } from "../lib/clipboard";
 import { Class, cssColor, getImgUrl, initStyle, setTitle } from "../root/root";
 
-import { EraserBrush } from "@erase2d/fabric";
 import bmp from "bmp-js";
 import { detectBorders } from "edge_det";
 import {
@@ -304,19 +303,59 @@ function toCanvas(canvas: HTMLCanvasElement, img: ImageData) {
 }
 
 async function setScreen(i: (typeof allScreens)[0]) {
+    console.log(
+        `[SCREENSHOT_CAPTURE_START] id=${i?.id}, bounds=${JSON.stringify(i?.bounds)}, scaleFactor=${i?.scaleFactor}`,
+    );
     let _img = screenShotCache.get(i.id);
     if (!_img) {
         try {
-            const __img = (await i.capture()).toImageData();
-            if (__img) {
+            const captureResult = await i.capture();
+            const __img = captureResult.toImageData();
+            if (__img && __img.width > 0 && __img.height > 0) {
                 screenShotCache.set(i.id, __img);
                 _img = __img;
+                console.log(
+                    `[SCREENSHOT_CAPTURE_SUCCESS] Captured size: ${__img.width}x${__img.height}`,
+                );
             }
         } catch (error) {
-            console.error("Error capturing screen:", error);
-            // todo tip
+            console.error(
+                "[SCREENSHOT_CAPTURE_FAILED] Error capturing screen:",
+                error,
+            );
         }
     }
+
+    // Fallback: 如果抓取失败或为空，构建一个保底尺寸的半透明画布，保证覆盖层绝对可交互
+    if (!_img || _img.width === 0 || _img.height === 0) {
+        console.warn(
+            "[SCREENSHOT_CAPTURE_FALLBACK] Creating fallback transparent canvas for overlay interaction",
+        );
+        const fallbackW = Math.max(
+            100,
+            Math.round(
+                (i.bounds?.width || window.innerWidth || 1920) *
+                    (i.scaleFactor || window.devicePixelRatio || 1),
+            ),
+        );
+        const fallbackH = Math.max(
+            100,
+            Math.round(
+                (i.bounds?.height || window.innerHeight || 1080) *
+                    (i.scaleFactor || window.devicePixelRatio || 1),
+            ),
+        );
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = fallbackW;
+        tempCanvas.height = fallbackH;
+        const tempCtx = tempCanvas.getContext("2d");
+        if (tempCtx) {
+            tempCtx.fillStyle = "rgba(0, 0, 0, 0.01)";
+            tempCtx.fillRect(0, 0, fallbackW, fallbackH);
+            _img = tempCtx.getImageData(0, 0, fallbackW, fallbackH);
+        }
+    }
+
     const img = _img;
     if (!img) return;
     const w = img.width;
@@ -489,26 +528,6 @@ function runOcr() {
     toolsX.close.f();
 }
 
-function runSearch() {
-    const type = 识图引擎.gv;
-    if (
-        type === "ai" &&
-        !store.get("AI.在线模型").find((i) => i.supportVision)
-    ) {
-        alert("无视觉模型，请在设置中添加模型");
-        return;
-    }
-    const c = getClipPhoto();
-    renderSend("clip_search", [c.toDataURL(), type]);
-    toolsX.close.f();
-}
-// 二维码
-function runQr() {
-    const c = getClipPhoto();
-    renderSend("clip_qr", [c.toDataURL()]);
-    toolsX.close.f();
-}
-
 function drawM(v: boolean) {
     if (v) {
         // 绘画模式
@@ -541,7 +560,7 @@ function trackLocation() {
 function openApp() {
     const path = require("node:path");
     const os = require("node:os");
-    const tmpPhoto = path.join(os.tmpdir(), "/eSearch/tmp.png");
+    const tmpPhoto = path.join(os.tmpdir(), "/Screenshot/tmp.png");
     const fs = require("node:fs");
     const c = getClipPhoto();
     const f = c.toDataURL().replace(/^data:image\/\w+;base64,/, "");
@@ -549,21 +568,6 @@ function openApp() {
     fs.writeFile(tmpPhoto, dataBuffer, () => {
         open_with(tmpPhoto);
     });
-}
-
-function initRecord() {
-    if (toolsX.record.el.gv === "normal") {
-        renderSend("clip_record", [
-            finalRect,
-            String(nowScreenId),
-            mainCanvas.width,
-            mainCanvas.height,
-            ratio,
-        ]);
-    } else {
-        renderSend("clip_recordx", []);
-    }
-    toolsX.close.f();
 }
 
 async function long_s() {
@@ -883,13 +887,6 @@ function checkTranslator() {
         alert("无翻译器，请先设置翻译器");
         return false;
     }
-    if (
-        store.get("屏幕翻译.语言.to") === "" ||
-        store.get("屏幕翻译.语言.from") === ""
-    ) {
-        alert("请设置屏幕翻译的语言");
-        return false;
-    }
     return true;
 }
 
@@ -898,36 +895,16 @@ async function translate() {
     if (!t) return;
     const display = getNowScreen();
     const c = getClipPhoto();
-    if (toolsX.translate.el.gv === "ding") {
-        renderSend("clip_ding", [
-            c.toDataURL(),
-            "translate",
-            {
-                x: finalRect[0] / ratio + display.bounds.x,
-                y: finalRect[1] / ratio + display.bounds.y,
-                w: finalRect[2] / ratio,
-                h: finalRect[3] / ratio,
-            },
-        ]);
-    } else
-        renderSend("clip_translate", [
-            {
-                rect: {
-                    x: finalRect[0],
-                    y: finalRect[1],
-                    w: finalRect[2],
-                    h: finalRect[3],
-                },
-                dipRect: {
-                    x: finalRect[0] / ratio + display.bounds.x,
-                    y: finalRect[1] / ratio + display.bounds.y,
-                    w: finalRect[2] / ratio,
-                    h: finalRect[3] / ratio,
-                },
-                displayId: nowScreenId,
-                img: getClipPhoto().toDataURL(),
-            },
-        ]);
+    renderSend("clip_ding", [
+        c.toDataURL(),
+        "translate",
+        {
+            x: finalRect[0] / ratio + display.bounds.x,
+            y: finalRect[1] / ratio + display.bounds.y,
+            w: finalRect[2] / ratio,
+            h: finalRect[3] / ratio,
+        },
+    ]);
     toolsX.close.f();
 }
 
@@ -2198,9 +2175,6 @@ function setEditType<T extends keyof EditType>(
         if (type === "free") {
             pencilElClick();
         }
-        if (type === "eraser") {
-            eraserElClick();
-        }
         if (type === "spray") {
             freeSprayElClick();
         }
@@ -2294,12 +2268,6 @@ function pencilElClick() {
     fabricCanvas.freeDrawingBrush.width = getShapePro("free").sw;
 
     freeShadow();
-}
-function eraserElClick() {
-    // todo
-    const eraser = new EraserBrush(fabricCanvas);
-    fabricCanvas.freeDrawingBrush = eraser;
-    fabricCanvas.freeDrawingBrush.width = getShapePro("eraser").sw;
 }
 function freeSprayElClick() {
     fabricCanvas.freeDrawingBrush = new SprayBrush(fabricCanvas);
@@ -2988,14 +2956,10 @@ const tools: 功能列表 = [
     "close",
     "screens",
     "ocr",
-    "search",
-    "QR",
     "open",
     "ding",
-    "record",
     "long",
     "translate",
-    "editor",
     "copy",
     "save",
 ];
@@ -3019,16 +2983,6 @@ const toolsX: Record<功能, { el: ElType<HTMLElement>; f: () => void }> = {
         ),
         f: () => runOcr(),
     },
-    search: {
-        el: selectEl(iconEl("search"), t("以图搜图"), [
-            { value: "baidu", name: t("百度") },
-            { value: "yandex", name: "Yandex" },
-            { value: "google", name: "Google" },
-            { value: "ai", name: "AI" },
-        ]),
-        f: () => runSearch(),
-    },
-    QR: { el: iconEl("scan").attr({ title: "二维码" }), f: () => runQr() },
     open: {
         el: iconEl("open").attr({ title: "其他应用打开" }),
         f: () => openApp(),
@@ -3036,13 +2990,6 @@ const toolsX: Record<功能, { el: ElType<HTMLElement>; f: () => void }> = {
     ding: {
         el: iconEl("ding").attr({ title: "屏幕贴图" }),
         f: () => runDing(),
-    },
-    record: {
-        el: selectEl<"normal" | "super">(iconEl("record"), t("录屏"), [
-            { name: t("标准录屏"), value: "normal" },
-            { name: t("超级录屏"), value: "super" },
-        ]),
-        f: () => initRecord(),
     },
     long: {
         el: selectEl<"y" | "xy">(iconEl("long_clip"), t("广截屏"), [
@@ -3052,23 +2999,8 @@ const toolsX: Record<功能, { el: ElType<HTMLElement>; f: () => void }> = {
         f: () => startLong(),
     },
     translate: {
-        el: selectEl<translateWinType["type"]>(
-            iconEl("translate"),
-            t("屏幕翻译"),
-            [
-                { name: t("贴图"), value: "ding" },
-                { name: t("自动翻译"), value: "live" },
-            ],
-        ),
+        el: iconEl("translate").attr({ title: "翻译" }),
         f: () => translate(),
-    },
-    editor: {
-        el: iconEl("super_edit").attr({ title: "高级图片编辑" }),
-        f: () => {
-            const c = getClipPhoto();
-            renderSend("clip_editor", [c.toDataURL()]);
-            toolsX.close.f();
-        },
     },
     copy: { el: iconEl("copy").attr({ title: "复制" }), f: () => runCopy() },
     save: { el: iconEl("save").attr({ title: "保存" }), f: () => runSave() },
@@ -3096,18 +3028,6 @@ toolsX.long.el.on("change", () => {
     store.set("广截屏.方向", toolsX.long.el.gv);
     longFX = toolsX.long.el.gv;
     toolsX.long.f();
-});
-
-toolsX.record.el.sv(store.get("录屏.模式"));
-toolsX.record.el.on("change", () => {
-    store.set("录屏.模式", toolsX.record.el.gv);
-    toolsX.record.f();
-});
-
-toolsX.translate.el.sv(store.get("屏幕翻译.type"));
-toolsX.translate.el.on("change", () => {
-    store.set("屏幕翻译.type", toolsX.translate.el.gv);
-    toolsX.translate.f();
 });
 
 toolBarEl.style({
@@ -3788,7 +3708,10 @@ renderOn("clip_init", async ([_displays, imgBuffer, mainid, act]) => {
         }
     setEditorP(1 / ratio, 0, 0);
 
-    document.body.style.opacity = "";
+    document.body.style.opacity = "1";
+    console.log(
+        "[SCREENSHOT_WINDOW_READY] Clip overlay DOM is fully ready and visible",
+    );
 
     renderSend("clip_show", []);
     const screensEl = toolsX.screens.el;
@@ -4015,20 +3938,12 @@ for (const m of hotkeyTipX) {
 setDefaultAction(autoDo);
 
 // OCR
+// OCR
 const ocr引擎 = toolsX.ocr.el;
 ocr引擎.sv(store.get("OCR.类型"));
 ocr引擎.on("change", () => {
     store.set("OCR.类型", ocr引擎.gv);
     toolsX.ocr.f();
-});
-
-// 以图搜图
-const 识图引擎 = toolsX.search.el;
-// @ts-ignore
-识图引擎.sv(store.get("以图搜图.引擎"));
-识图引擎.on("change", () => {
-    store.set("以图搜图.引擎", 识图引擎.gv);
-    toolsX.search.f();
 });
 
 trackLocation();

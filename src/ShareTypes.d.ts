@@ -192,47 +192,9 @@ export interface setting {
             space: boolean;
         };
     }[];
-    AI: {
-        运行后端: "cpu" | "cuda" | "coreml" | "directml" | "webgpu";
-        在线模型: {
-            name: string;
-            type: "chatgpt";
-            supportVision: boolean;
-            url: string;
-            key: string;
-            model: string;
-            config: Record<string, unknown>;
-        }[];
-    };
-    在线OCR: {
-        baidu: {
-            url: string;
-            id: string;
-            secret: string;
-            time: number;
-            token: string;
-        };
-        youdao: {
-            id: string;
-            secret: string;
-        };
-    };
-    以图搜图: {
-        引擎: string;
-    };
-    自动打开链接: boolean;
-    自动搜索中文占比: number;
-    浏览器中打开: boolean;
-    浏览器: {
-        标签页: {
-            自动关闭: boolean;
-            小: boolean;
-            灰度: boolean;
-        };
-    };
     保存: {
         默认格式: "png" | "jpg" | "svg" | "webp" | "bmp";
-        保存路径: { 图片: string; 视频: string };
+        保存路径: { 图片: string };
         快速保存: boolean;
         保存并复制: boolean;
     };
@@ -281,85 +243,11 @@ export interface setting {
         模式: "大版本" | "小版本" | "dev";
         忽略版本: string;
     };
-    录屏: {
-        模式: "normal" | "super";
-        自动录制: boolean;
-        自动录制延时: number;
-        视频比特率: number;
-        摄像头: {
-            开启: boolean;
-            设备: string;
-            镜像: boolean;
-            背景: {
-                模式: "none" | "hide" | "blur" | "img" | "video";
-                模糊: number;
-                imgUrl: string;
-                videoUrl: string;
-                fit: "cover" | "fit";
-            };
-        };
-        音频: {
-            设备列表: string[];
-            启用系统内录: boolean;
-        };
-        转换: {
-            格式: string;
-            码率: number;
-            帧率: number;
-            其他: string;
-            高质量gif: boolean;
-            分段: number;
-        };
-        提示: {
-            键盘: {
-                开启: boolean;
-                位置: {
-                    x: "+" | "-";
-                    y: "+" | "-";
-                    offsetX: number;
-                    offsetY: number;
-                };
-                大小: number;
-            };
-            鼠标: {
-                开启: boolean;
-            };
-            光标: {
-                开启: boolean;
-                样式: string;
-            };
-        };
-        大小: {
-            x: number;
-            y: number;
-            width: number;
-            height: number;
-        };
-        超级录屏: {
-            编码选择: "性能优先" | "内存优先";
-            关键帧间隔: number;
-            缩放: number;
-            格式: string;
-            导出后关闭: boolean;
-        };
-    };
-    屏幕翻译: {
-        type: translateWinType["type"];
-        dTime: number;
-        color: {
-            bg: string;
-            text: string;
-        };
-        语言: {
-            from: string;
-            to: string;
-        };
-    };
     翻译: {
         翻译器: {
             id: string;
             name: string;
-            type: keyof typeof import("xtranslator")["default"]["e"] | "llm";
+            type: keyof typeof import("xtranslator")["default"]["e"];
             keys: Record<string, string | object>;
         }[];
         收藏: {
@@ -383,35 +271,6 @@ export interface setting {
         t: number;
         方向: "y" | "xy";
     };
-    高级图片编辑: {
-        配置: {
-            name: string;
-            raduis: number;
-            outerRadius: boolean;
-            "shadow.x": number;
-            "shadow.y": number;
-            "shadow.blur": number;
-            "shadow.color": string;
-            "padding.x": number;
-            "padding.y": number;
-            autoPadding: boolean;
-            bgType:
-                | "color"
-                | "image"
-                | "linear-gradient"
-                | "radial-gradient"
-                | "conic-gradient";
-            bgColor: string;
-            bgUrl: string;
-            "bg.gradient.repeat": boolean;
-            "bg.gradient.repeatSize": number | `${number}px`;
-            "bg.gradient.angle": number;
-            "bg.gradient.x": number; // 0-1
-            "bg.gradient.y": number; // 0-1
-            "bg.gradient": { offset: number; color: string }[];
-        }[];
-        默认配置: string;
-    };
     网络: {
         github镜像: {
             启用: boolean;
@@ -425,14 +284,10 @@ type 功能列表 = [
     "close",
     "screens",
     "ocr",
-    "search",
-    "QR",
     "open",
     "ding",
-    "record",
     "long",
     "translate",
-    "editor",
     "copy",
     "save",
 ];
@@ -475,7 +330,7 @@ type EditType = {
 };
 
 type MainWinType = {
-    type: "text" | "ocr" | "image" | "qr";
+    type: "text" | "ocr" | "image";
     content: string;
     mode?: setting["主页面"]["模式"];
     arg0?: string;

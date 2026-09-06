@@ -1,4 +1,4 @@
-const { ipcRenderer, nativeImage, shell, dialog } =
+const { ipcRenderer, nativeImage, shell, dialog, desktopCapturer } =
     require("electron") as typeof import("electron");
 import type { MessageBoxSyncOptions, NativeImage } from "electron";
 import { renderSendSync } from "../../../lib/ipc";
@@ -250,12 +250,98 @@ async function dispaly2screen(
         return { screen: allScreens, type: "normal", window: [] };
     }
 
-    const screens = Screenshots.Monitor.all();
-    const windows = Screenshots.Window.all();
+    let screens: ReturnType<typeof Screenshots.Monitor.all> = [];
+    try {
+        screens = Screenshots.Monitor.all();
+    } catch (error) {
+        console.error("Monitor.all 失败:", error);
+    }
+    let windows: ReturnType<typeof Screenshots.Window.all> = [];
+    try {
+        windows = Screenshots.Window.all();
+    } catch (error) {
+        console.warn("Window.all 失败，降级为空窗口列表:", error);
+    }
 
     const allScreens: ReturnData[] = [];
 
     // 使用displays作为参考，优化匹配方式
+
+    async function safeCaptureFromMonitor(
+        matchedScreen: import("node-screenshots").Monitor,
+        display?:
+            | Electron.Display
+            | {
+                  bounds: { width: number; height: number };
+                  scaleFactor: number;
+                  id?: number;
+              },
+    ): Promise<{
+        toImageData: () => ImageData;
+        toNativeImage: () => Electron.NativeImage;
+    }> {
+        try {
+            const data = await matchedScreen.captureImage();
+            if (data && data.width > 0 && data.height > 0) {
+                return {
+                    toImageData: () =>
+                        toCanvas2(
+                            data.toRawSync(true),
+                            data.width,
+                            data.height,
+                        ),
+                    toNativeImage: () => {
+                        return nativeImage.createFromBuffer(
+                            data.toPngSync(true),
+                        );
+                    },
+                };
+            }
+        } catch (e) {
+            console.warn(
+                "node-screenshots capture failed, trying desktopCapturer fallback:",
+                e,
+            );
+        }
+
+        // Fallback: desktopCapturer
+        if (display && desktopCapturer) {
+            try {
+                const targetW = Math.round(
+                    display.bounds.width * (display.scaleFactor || 1),
+                );
+                const targetH = Math.round(
+                    display.bounds.height * (display.scaleFactor || 1),
+                );
+                const sources = await desktopCapturer.getSources({
+                    types: ["screen"],
+                    thumbnailSize: { width: targetW, height: targetH },
+                });
+                if (sources && sources.length > 0) {
+                    const matchedSource =
+                        sources.find(
+                            (s) =>
+                                display.id &&
+                                String(s.display_id) === String(display.id),
+                        ) || sources[0];
+                    if (matchedSource && !matchedSource.thumbnail.isEmpty()) {
+                        const nImg = matchedSource.thumbnail;
+                        return {
+                            toImageData: () => nImage2Imagedata(nImg).data,
+                            toNativeImage: () => nImg,
+                        };
+                    }
+                }
+            } catch (err) {
+                console.warn("desktopCapturer fallback also failed:", err);
+            }
+        }
+
+        return {
+            toImageData: () => emptyImageData(),
+            toNativeImage: () => nativeImage.createEmpty(),
+        };
+    }
 
     if (screens.length === 0) {
         allScreens.push({
@@ -296,80 +382,52 @@ async function dispaly2screen(
                     },
                     scaleFactor: display.scaleFactor,
                     id: display.id,
-                    capture: async () => {
-                        const data = await matchedScreen.captureImage();
-                        return {
-                            toImageData: () =>
-                                toCanvas2(
-                                    data.toRawSync(true),
-                                    data.width,
-                                    data.height,
-                                ),
-                            toNativeImage: () => {
-                                return nativeImage.createFromBuffer(
-                                    data.toPngSync(true),
-                                );
-                            },
-                        };
-                    },
+                    capture: () =>
+                        safeCaptureFromMonitor(matchedScreen, display),
                 };
                 allScreens.push(x);
             }
-        }
+        } else {
+            for (const display of displays) {
+                const matchedScreens = new Set<number>();
+                let matchedScreen = screens[0];
 
-        for (const display of displays) {
-            const matchedScreens = new Set<number>();
-            let matchedScreen = screens[0];
-
-            // 如果id匹配不上，用xy宽高匹配屏幕中心点
-            let minDistance = Number.POSITIVE_INFINITY;
-            for (const screen of screens) {
-                if (matchedScreens.has(screen.id())) {
-                    continue; // 跳过已匹配的screen
-                }
-                const screenBounds = {
-                    x: screen.x(),
-                    y: screen.y(),
-                    width: screen.width(),
-                    height: screen.height(),
-                };
-                const distance = getCenterDistance(
-                    display.bounds,
-                    screenBounds,
-                );
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    matchedScreen = screen;
-                }
-            }
-
-            matchedScreens.add(matchedScreen.id());
-            const x: ReturnData = {
-                bounds: display.bounds,
-                size: {
-                    width: display.bounds.width,
-                    height: display.bounds.height,
-                },
-                scaleFactor: display.scaleFactor,
-                id: display.id,
-                capture: async () => {
-                    const data = await matchedScreen!.captureImage();
-                    return {
-                        toImageData: () =>
-                            toCanvas2(
-                                data.toRawSync(true),
-                                data.width,
-                                data.height,
-                            ),
-                        toNativeImage: () => {
-                            return nativeImage.createFromBuffer(
-                                data.toPngSync(true),
-                            );
-                        },
+                // 如果id匹配不上，用xy宽高匹配屏幕中心点
+                let minDistance = Number.POSITIVE_INFINITY;
+                for (const screen of screens) {
+                    if (matchedScreens.has(screen.id())) {
+                        continue; // 跳过已匹配的screen
+                    }
+                    const screenBounds = {
+                        x: screen.x(),
+                        y: screen.y(),
+                        width: screen.width(),
+                        height: screen.height(),
                     };
-                },
-            };
-            allScreens.push(x);
+                    const distance = getCenterDistance(
+                        display.bounds,
+                        screenBounds,
+                    );
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        matchedScreen = screen;
+                    }
+                }
+
+                matchedScreens.add(matchedScreen.id());
+                const x: ReturnData = {
+                    bounds: display.bounds,
+                    size: {
+                        width: display.bounds.width,
+                        height: display.bounds.height,
+                    },
+                    scaleFactor: display.scaleFactor,
+                    id: display.id,
+                    capture: () =>
+                        safeCaptureFromMonitor(matchedScreen, display),
+                };
+                allScreens.push(x);
+            }
         }
     } else {
         // 如果没有displays，使用screens（但信息可能不正确）
@@ -384,32 +442,26 @@ async function dispaly2screen(
                 size: { width: screen.width(), height: screen.height() },
                 scaleFactor: screen.scaleFactor(),
                 id: screen.id(),
-                capture: async () => {
-                    const data = await screen.captureImage();
-                    return {
-                        toImageData: () =>
-                            toCanvas2(
-                                data.toRawSync(true),
-                                data.width,
-                                data.height,
-                            ),
-                        toNativeImage: () => {
-                            return nativeImage.createFromBuffer(
-                                data.toPngSync(true),
-                            );
-                        },
-                    };
-                },
+                capture: () => safeCaptureFromMonitor(screen),
             };
             allScreens.push(x);
         }
     }
 
+    const safeWindows: {
+        rect: { x: number; y: number; w: number; h: number };
+    }[] = [];
+    for (const w of windows) {
+        try {
+            safeWindows.push({
+                rect: { x: w.x(), y: w.y(), w: w.width(), h: w.height() },
+            });
+        } catch {}
+    }
+
     return {
         screen: allScreens,
-        window: windows.map((w) => ({
-            rect: { x: w.x(), y: w.y(), w: w.width(), h: w.height() },
-        })),
+        window: safeWindows,
         type: "normal",
     };
 }

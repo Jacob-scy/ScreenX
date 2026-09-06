@@ -23,15 +23,7 @@ function open(path: string) {
             break;
         }
         case "darwin": {
-            const { canceled: c, filePaths: paths } = renderSendSync(
-                "clip_mac_app",
-                [],
-            );
-            if (!c) {
-                const co = `open -a ${paths[0].replace(/ /g, "\\ ")} ${path}`;
-                exec(co);
-            }
-
+            exec(`open "${path}"`);
             break;
         }
     }

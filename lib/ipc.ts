@@ -37,8 +37,6 @@ type Message = {
     clip_show: () => void;
     clip_close: () => void;
     clip_ocr: (img: string, type: string) => void;
-    clip_search: (img: string, type: string) => void;
-    clip_qr: (img: string) => void;
     clip_hide: () => void;
     clip_save: (ext: string) => string;
     clip_ding: (
@@ -46,23 +44,12 @@ type Message = {
         type: "translate" | "ding",
         rect: { w: number; h: number; x: number; y: number },
     ) => void;
-    clip_mac_app: () => { canceled: boolean; filePaths: string[] };
-    clip_record: (
-        rect: [number, number, number, number],
-        id: string,
-        w: number,
-        h: number,
-        r: number,
-    ) => void;
     getMousePos: () => {
         ab: { x: number; y: number };
         po: { x: number; y: number };
     };
-    clip_translate: (t: Omit<translateWinType, "type">) => void;
-    clip_editor: (img: string) => void;
-    clip_recordx: () => void;
-    save_file_path: (type: string, isVideo?: boolean) => string;
-    ok_save: (m: string, isVideo?: boolean) => void;
+    save_file_path: (type: string) => string;
+    ok_save: (m: string) => void;
     clip_stop_long: () => void;
     clip_init: (
         displays: Electron.Display[],
@@ -119,20 +106,6 @@ type Message = {
     setAutoStart: (value: boolean) => void;
     theme: (t: NativeTheme["themeSource"]) => void;
     dingIgnore: (ignore: boolean) => void;
-    recorderReady: () => void;
-    recordInit: (
-        id: string,
-        r: [number, number, number, number],
-        screenW: number,
-        screenH: number,
-    ) => void;
-    recordStartStop: () => void;
-    recordStop: () => void;
-    recordStart: () => void;
-    recordTime: (time: string) => void;
-    recordCamera: (camera: boolean) => void;
-    recordState: (state: "stop" | "pause") => void;
-    recordSavePath: (ext: string) => void;
     dingShare: (
         data:
             | { type: "close"; id: string; closeAll: boolean }
@@ -150,16 +123,7 @@ type Message = {
         url: string,
         type: "translate" | "ding",
     ) => void;
-    superRecorderInit: (sourceId: string) => void;
-    superPhotoEditorInit: (img: string) => void;
-    recordMemWarning: () => void;
-    translatorInit: (
-        id: number,
-        display: Display[],
-        rect: { x: number; y: number; w: number; h: number },
-    ) => void;
     dingMouse: (x: number, y: number) => void;
-    recordSavePathReturn: (path: string) => void; // todo remove
     editorInit: (name: number, list: MainWinType) => void;
     browserNew: (id: number, url: string) => void;
     browserTitle: (id: number, title: string) => void;
@@ -170,11 +134,13 @@ type Message = {
     githubUrl: (path: string, _type?: GithubUrlType | "auto") => string;
     getScreens: () => Display[];
     getLogs: () => {
-        from: "screenShot" | "ding" | "mainWindow" | "translator";
+        from: "screenShot" | "ding" | "mainWindow";
         message: string;
         type: "info" | "warning" | "error";
         lineCount: number;
     }[];
+    trigger_screenshot: () => void;
+    trigger_long_screenshot: () => void;
 };
 
 const name = "ipc";

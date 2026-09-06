@@ -122,42 +122,15 @@ const beforePack = async () => {
             ),
         );
     }
-    if (!checkPath("./lib/ffmpeg")) {
-        const winpath = "ffmpeg-n6.1-latest-win64-gpl-6.1";
-        const o = {
-            win32: {
-                x64: `${githubUrl}/xushengfeng/eSearch/releases/download/13.0.0-beta.1/ffmpeg-win32-x64.zip`,
-            },
-            darwin: {
-                x64: `${githubUrl}/xushengfeng/eSearch/releases/download/13.0.0-beta.1/ffmpeg-darwin-x64.zip`,
-                arm64: `${githubUrl}/xushengfeng/eSearch/releases/download/13.0.0-beta.1/ffmpeg-darwin-arm64.zip`,
-            },
-        };
-        if (o?.[process.platform]?.[arch]) {
-            ensureDir("./lib/ffmpeg");
-            await downloadUnzip(
-                o[process.platform][process.arch],
-                "./lib/ffmpeg/",
-            );
-            if (process.platform === "win32") {
-                fs.copyFileSync(
-                    path.join("./lib/ffmpeg/", winpath, "bin", "ffmpeg.exe"),
-                    path.join("./lib/ffmpeg/", "ffmpeg.exe"),
-                );
-                fs.rmSync(path.join("./lib/ffmpeg/", winpath), {
-                    recursive: true,
-                });
-            }
-        }
-    }
 };
 
 /**
  * @type import("electron-builder").Configuration
  */
 const build = {
-    appId: "com.esearch.app",
-    executableName: "e-search",
+    productName: "Screenshot",
+    appId: "com.screenshot.app",
+    executableName: "screenshot",
     directories: {
         output: "build",
     },

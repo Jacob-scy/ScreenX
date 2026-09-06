@@ -61,7 +61,7 @@ import type {
 } from "../ShareTypes";
 
 const runPath = join(resolve(__dirname, ""), "../../");
-const tmpDir = join(tmpdir(), "eSearch");
+const tmpDir = join(tmpdir(), "Screenshot");
 
 // 自定义用户路径
 try {
@@ -132,7 +132,7 @@ if (dev) {
 }
 
 const logs: {
-    from: "screenShot" | "ding" | "mainWindow" | "translator";
+    from: "screenShot" | "ding" | "mainWindow";
     message: string;
     type: "info" | "warning" | "error";
     lineCount: number;
@@ -328,9 +328,6 @@ async function argRun(c: string[], first?: boolean) {
             [["o", "ocr"], 0, t("文字识别")],
             ["engine", 1, ocrE.join(", ")],
             ["[mode]", 1, ""],
-            [["m", "img"], 0, t("以图搜图")],
-            ["engine", 1, searchE.join(", ")],
-            ["[mode]", 1, ""],
             [["d", "ding"], 0, t("贴图")],
             [["t", "text"], 0, t("主页面打开文字")],
             ["[mode]", 1, ""],
@@ -450,15 +447,6 @@ async function argRun(c: string[], first?: boolean) {
         const img = await getImg();
         if (!img) return;
         ding(img);
-    } else if (argv.m || argv.img) {
-        const img = await getImg();
-        if (!img) return;
-        createMainWindow({
-            type: "image",
-            content: img.toDataURL(),
-            arg0: getEngine(e, searchE, store.get("以图搜图.引擎")),
-            mode: textMode,
-        });
     } else if (argv.t || argv.text) {
         createMainWindow({
             type: "text",
@@ -546,9 +534,7 @@ process.on("unhandledRejection", (e) => {
 });
 
 app.whenReady().then(() => {
-    console.log(
-        `eSearch ${app.getVersion()} 启动\n项目地址：https://github.com/xushengfeng/eSearch`,
-    );
+    console.log(`Screenshot ${app.getVersion()} 启动`);
 
     crashReporter.start({ uploadToServer: false });
 
@@ -611,29 +597,9 @@ app.whenReady().then(() => {
                 },
             },
             {
-                label: t("以图搜图"),
+                label: t("剪贴板贴图"),
                 click: () => {
-                    setTimeout(() => {
-                        sendCaptureEvent(undefined, "search");
-                    }, store.get("主搜索功能.截屏搜索延迟"));
-                },
-            },
-            {
-                label: t("超级录屏"),
-                click: () => {
-                    createSuperRecorderWindow();
-                },
-            },
-            {
-                type: "separator",
-            },
-            {
-                label: t("浏览器打开"),
-                type: "checkbox",
-                checked: store.get("浏览器中打开"),
-                click: (i) => {
-                    store.set("浏览器中打开", i.checked);
-                    update();
+                    dingFromClipBoard();
                 },
             },
             {
@@ -736,7 +702,7 @@ app.whenReady().then(() => {
                 click: (_i, win) => {
                     shell.openExternal(
                         feedbackUrl({
-                            title: `[${win?.getTitle()?.replace("eSearch - ", "") ?? "……界面"}] 存在……问题`,
+                            title: `[${win?.getTitle()?.replace("Screenshot - ", "") ?? "……界面"}] 存在……问题`,
                         }),
                     );
                 },
@@ -777,25 +743,35 @@ app.whenReady().then(() => {
         }).show();
 
     const 快捷键 = store.get("快捷键");
+    console.log("【快捷键配置】:", JSON.stringify(快捷键));
     for (const [k, m] of typedEntries(快捷键)) {
         try {
-            if (m.key)
-                globalShortcut.register(m.key, () => {
+            if (m.key) {
+                const ok = globalShortcut.register(m.key, () => {
+                    console.log(`【触发快捷键】: ${k} (${m.key})`);
                     快捷键函数[k]();
                 });
+                console.log(`【注册快捷键】 ${k}: ${m.key} -> 结果: ${ok}`);
+            }
         } catch (error) {
+            console.error(`【注册快捷键异常】 ${k}:`, error);
             m.key = "";
             store.set("快捷键", 快捷键);
         }
     }
     const 工具快捷键 = store.get("全局工具快捷键");
+    console.log("【全局工具快捷键配置】:", JSON.stringify(工具快捷键));
     for (const [k, m] of typedEntries(工具快捷键)) {
         try {
-            if (m)
-                globalShortcut.register(m, () => {
+            if (m) {
+                const ok = globalShortcut.register(m, () => {
+                    console.log(`【触发全局工具快捷键】: ${k} (${m})`);
                     sendCaptureEvent(undefined, k as 功能);
                 });
+                console.log(`【注册全局工具快捷键】 ${k}: ${m} -> 结果: ${ok}`);
+            }
         } catch (error) {
+            console.error(`【注册全局工具快捷键异常】 ${k}:`, error);
             工具快捷键[k] = "";
             store.set("全局工具快捷键", 工具快捷键);
         }
@@ -815,6 +791,9 @@ app.whenReady().then(() => {
     setMenu();
 
     setTray();
+
+    // 默认展示主窗口，便于直观测试与交互
+    createMainWindow({ type: "text", content: "" });
 });
 
 function setTray() {
@@ -1043,15 +1022,15 @@ function createClipWindow() {
         width: screen.getPrimaryDisplay().workAreaSize.width,
         height: screen.getPrimaryDisplay().workAreaSize.height,
         show: false,
-        alwaysOnTop: !dev, // 为了方便调试，调试模式就不居上了
+        alwaysOnTop: true,
         fullscreenable: true,
         transparent: true,
         frame: false,
-        resizable: process.platform === "linux", // gnome下为false时无法全屏
+        resizable: true,
         skipTaskbar: true,
         autoHideMenuBar: true,
         movable: false,
-        enableLargerThanScreen: true, // mac
+        enableLargerThanScreen: true,
         hasShadow: false,
         webPreferences: {
             nodeIntegration: true,
@@ -1060,7 +1039,7 @@ function createClipWindow() {
         },
     });
 
-    if (!dev) _clipWindow.setAlwaysOnTop(true, "screen-saver");
+    _clipWindow.setAlwaysOnTop(true, "screen-saver");
 
     rendererPath(_clipWindow, "capture.html");
 
@@ -1102,12 +1081,6 @@ mainOn("clip_close", () => {
 mainOn("clip_ocr", ([img, type]) => {
     createMainWindow({ type: "ocr", content: img, arg0: type });
 });
-mainOn("clip_search", ([img, type]) => {
-    createMainWindow({ type: "image", content: img, arg0: type });
-});
-mainOn("clip_qr", ([img]) => {
-    createMainWindow({ type: "qr", content: img });
-});
 mainOn("clip_hide", async () => {
     hideClip();
 });
@@ -1136,25 +1109,6 @@ mainOn("clip_save", async ([type]) => {
 mainOn("clip_ding", ([img, type, rect]) => {
     createDingWindow(rect.x, rect.y, rect.w, rect.h, img, type);
 });
-mainOn("clip_mac_app", async () => {
-    hideClip();
-    const x = await dialog.showOpenDialog({
-        defaultPath: "/Applications",
-    });
-    if (x.canceled) {
-        clipWindow?.show();
-        clipWindow?.setSimpleFullScreen(true);
-    }
-    return { canceled: x.canceled, filePaths: x.filePaths };
-});
-mainOn("clip_record", ([rect, id, w, h, r]) => {
-    createRecorderWindow(rect, {
-        id: id,
-        w: w,
-        h: h,
-        r: r,
-    });
-});
 mainOn("getMousePos", (_, e) => {
     const w = BrowserWindow.fromWebContents(e.sender)?.getBounds();
     const p = screen.getCursorScreenPoint();
@@ -1163,25 +1117,28 @@ mainOn("getMousePos", (_, e) => {
         ab: p,
     };
 });
-mainOn("clip_translate", ([arg]) => {
-    createTranslator(arg);
+mainOn("trigger_screenshot", () => {
+    startScreenshot();
 });
-mainOn("clip_editor", ([arg]) => {
-    createPhotoEditor(arg);
-});
-mainOn("clip_recordx", () => {
-    createSuperRecorderWindow();
+mainOn("trigger_long_screenshot", () => {
+    startLongScreenshot();
 });
 
 /**
- * 获取图片
- * @param {?string} imgPath 路径
+ * 统一截图入口 (按钮、快捷键、托盘共享同一函数)
  */
-function showPhoto(imgPath?: string) {
+function startScreenshot(imgPath?: string) {
+    const timestamp = new Date().toISOString();
+    console.log(
+        `[${timestamp}][MAIN] SCREENSHOT_REQUEST: type=normal, customPath=${!!imgPath}`,
+    );
     if (imgPath) {
-        console.log(imgPath);
         readFile(imgPath, (err, data) => {
-            if (err) console.error(err);
+            if (err)
+                console.error(
+                    `[${timestamp}][MAIN] SCREENSHOT_CAPTURE_FAILED:`,
+                    err,
+                );
             sendCaptureEvent(data);
         });
     } else {
@@ -1189,21 +1146,51 @@ function showPhoto(imgPath?: string) {
     }
 }
 
+function startLongScreenshot() {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}][MAIN] SCREENSHOT_REQUEST: type=long`);
+    sendCaptureEvent(undefined, "long");
+}
+
+function showPhoto(imgPath?: string) {
+    startScreenshot(imgPath);
+}
+
 async function fullScreen() {
+    const timestamp = new Date().toISOString();
     const nearestScreen = screen.getDisplayNearestPoint(
         screen.getCursorScreenPoint(),
     );
+    console.log(
+        `[${timestamp}][MAIN] SCREENSHOT_DISPLAY_DETECTED: id=${nearestScreen.id}, bounds=[${nearestScreen.bounds.x},${nearestScreen.bounds.y},${nearestScreen.bounds.width},${nearestScreen.bounds.height}], scaleFactor=${nearestScreen.scaleFactor}`,
+    );
     const win = await getClipWin();
+
+    // Windows 平台必须完整设置宽高！
     win.setBounds({
         x: nearestScreen.bounds.x,
         y: nearestScreen.bounds.y,
+        width: nearestScreen.bounds.width,
+        height: nearestScreen.bounds.height,
     });
+    win.setAlwaysOnTop(true, "screen-saver");
     win.show();
-    win.setSimpleFullScreen(true);
+    win.focus();
+    console.log(
+        `[${timestamp}][MAIN] SCREENSHOT_WINDOW_SHOW: bounds=[${win.getBounds().x},${win.getBounds().y},${win.getBounds().width},${win.getBounds().height}], isVisible=${win.isVisible()}, isAlwaysOnTop=${win.isAlwaysOnTop()}`,
+    );
 }
 
 async function sendCaptureEvent(data?: Buffer, type?: 功能) {
-    mainSend((await getClipWin())?.webContents, "clip_init", [
+    const timestamp = new Date().toISOString();
+    console.log(
+        `[${timestamp}][MAIN] SCREENSHOT_CAPTURE_START: type=${type ?? "normal"}`,
+    );
+    const win = await getClipWin();
+    console.log(
+        `[${timestamp}][MAIN] SCREENSHOT_WINDOW_READY: clipWindowLoaded=${clipWindowLoaded}, isVisible=${win?.isVisible()}`,
+    );
+    mainSend(win?.webContents, "clip_init", [
         screen.getAllDisplays(),
         data,
         screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).id,
@@ -1213,6 +1200,8 @@ async function sendCaptureEvent(data?: Buffer, type?: 功能) {
 
 /** 关闭或隐藏截屏 */
 function exitFullScreen() {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}][MAIN] SCREENSHOT_OVERLAY_CLOSE`);
     if (keepClip) {
         clipWindow?.setSimpleFullScreen(false);
         clipWindow?.hide();
@@ -1281,179 +1270,9 @@ function lianPai(d = store.get("连拍.间隔"), maxN = store.get("连拍.数"))
     }
 }
 
-let recording = false;
-const recorderWinW = 264;
-const recorderWinH = 24;
-
-let _recorder: BrowserWindow;
-let _recorderTipWin: BrowserWindow;
-function createRecorderWindow(
-    rect0: [number, number, number, number],
-    screenx: { id: string; w: number; h: number; r: number },
-) {
-    const s = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-    const ratio = screenx.r;
-    const p = {
-        x: screen.getCursorScreenPoint().x,
-        y: screen.getCursorScreenPoint().y,
-    };
-    const rect = rect0.map((v) => v / ratio);
-    const sx = s.bounds.x;
-    const sy = s.bounds.y;
-    const sx1 = sx + s.bounds.width;
-    const sy1 = sy + s.bounds.height;
-    const hx = sx + rect[0] + rect[2] / 2;
-    const hy = sy + rect[1] + rect[3] / 2;
-    const w = recorderWinW;
-    const h = recorderWinH;
-    let x = p.x <= hx ? sx + rect[0] : sx + rect[0] + rect[2] - w;
-    let y = p.y <= hy ? sy + rect[1] - h - 8 : sy + rect[1] + rect[3] + 8;
-    x = Math.max(x, sx);
-    x = Math.min(x, sx1 - w);
-    y = Math.max(y, sy);
-    y = Math.min(y, sy1 - h);
-    x = Math.round(x);
-    y = Math.round(y);
-    const recorder = new BrowserWindow(baseWinConfig());
-    _recorder = recorder;
-    rendererPath(recorder, "recorder.html");
-    if (dev) recorder.webContents.openDevTools();
-
-    recorder.on("close", () => {
-        store.set("录屏.大小.x", recorder.getBounds().x);
-        store.set("录屏.大小.y", recorder.getBounds().y);
-        try {
-            recorderTipWin.close();
-        } catch (error) {}
-    });
-
-    recorder.on("resize", () => {
-        if (recorder.isResizable()) {
-            store.set("录屏.大小.width", recorder.getBounds().width);
-            store.set("录屏.大小.height", recorder.getBounds().height);
-        }
-    });
-
-    mainOn("recorderReady", () => {
-        desktopCapturer.getSources({ types: ["screen"] }).then((sources) => {
-            let dId = sources.find((s) => s.display_id === screenx.id)?.id;
-            if (!dId) dId = sources[0].id;
-            mainSend(recorder.webContents, "recordInit", [
-                dId,
-                rect0,
-                screenx.w,
-                screenx.h,
-            ]);
-        });
-    });
-
-    globalShortcut.register("Super+R", () => {
-        if (!recorder.isDestroyed()) {
-            mainSend(recorder.webContents, "recordStartStop", []);
-        }
-    });
-
-    const border = 2;
-    const rect1 = rect0.map((v) => Math.round(v / ratio));
-    const recorderTipWin = new BrowserWindow({
-        x: rect1[0] - border,
-        y: rect1[1] - border,
-        width: rect1[2] + border * 2,
-        height: rect1[3] + border * 2 + 24,
-        transparent: true,
-        frame: false,
-        autoHideMenuBar: true,
-        resizable: process.platform === "linux",
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-            sandbox: false,
-        },
-    });
-    _recorderTipWin = recorderTipWin;
-    rendererPath(recorderTipWin, "recorderTip.html");
-    if (dev) recorderTipWin.webContents.openDevTools();
-
-    recorderTipWin.setAlwaysOnTop(true, "screen-saver");
-
-    recorderTipWin.setIgnoreMouseEvents(true);
-
-    recording = true;
-}
-
-function checkWin(win: BrowserWindow) {
-    return win && !win.isDestroyed();
-}
-
-mainOn("recordStop", () => {
-    if (checkWin(_recorderTipWin)) _recorderTipWin.close();
-    recording = false;
-});
-mainOn("recordStart", () => {
-    if (checkWin(_recorder)) _recorder.minimize();
-});
-mainOnReflect("recordTime", () => {
-    if (checkWin(_recorderTipWin)) return [_recorderTipWin.webContents];
-    return [];
-});
-mainOnReflect("recordCamera", () => {
-    if (checkWin(_recorderTipWin)) return [_recorderTipWin.webContents];
-    return [];
-});
-mainOnReflect("recordState", () => {
-    if (checkWin(_recorder)) return [_recorder.webContents];
-    return [];
-});
-mainOn("recordSavePath", ([ext]) => {
-    const savedPath = store.get("保存.保存路径.视频") || "";
-    dialog
-        .showSaveDialog({
-            title: t("选择要保存的位置"),
-            defaultPath: savedPath
-                ? join(savedPath, `${getFileName()}.${ext}`)
-                : undefined,
-            filters: [{ name: t("视频"), extensions: [ext] }],
-        })
-        .then(async (x) => {
-            if (x.filePath) {
-                let fpath = x.filePath;
-                if (!fpath.includes(".")) {
-                    fpath += `.${ext}`;
-                }
-                if (checkWin(_recorder))
-                    mainSend(_recorder.webContents, "recordSavePathReturn", [
-                        fpath,
-                    ]);
-            } else {
-                new Notification({
-                    title: `${app.name} ${t("保存视频失败")}`,
-                    body: t("用户已取消保存"),
-                    icon: join(runPath, "assets/logo/64x64.png"),
-                }).show();
-            }
-        });
-});
-
-function createSuperRecorderWindow() {
-    const recorder = new BrowserWindow(baseWinConfig());
-    recorder.minimize();
-    rendererPath(recorder, "videoEditor.html");
-    if (dev) recorder.webContents.openDevTools();
-    recorder.webContents.on("did-finish-load", () => {
-        desktopCapturer.getSources({ types: ["screen"] }).then((sources) => {
-            const dId = sources[0].id;
-            mainSend(recorder.webContents, "superRecorderInit", [dId]);
-        });
-    });
-}
 mainOn("reloadMainFromSetting", () => {
     if (clipWindow && !clipWindow.isDestroyed() && !clipWindow.isVisible())
         clipWindow.reload();
-    if (contextMenu && tray) {
-        contextMenu.items[8].checked = store.get("浏览器中打开");
-        tray.popUpContextMenu(contextMenu);
-        tray.closeContextMenu();
-    }
 });
 mainOn("getDefaultSetting", async () => {
     return defaultSetting;
@@ -1748,88 +1567,6 @@ mainOn("edit_pic", ([img]) => {
     sendCaptureEvent(img);
 });
 
-function createTranslator(op: Omit<translateWinType, "type">) {
-    const win = new BrowserWindow({
-        transparent: true,
-        frame: false,
-        alwaysOnTop: true,
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-        },
-        autoHideMenuBar: true,
-    });
-
-    const screenSize = (
-        screen.getAllDisplays().find((i) => i.id === op.displayId) ||
-        screen.getPrimaryDisplay()
-    ).bounds;
-    let x = Math.floor(op.dipRect.x);
-    let y = Math.floor(op.dipRect.y);
-    const w = Math.floor(op.dipRect.w);
-    const h = Math.floor(op.dipRect.h);
-    if (w > h) {
-        const y1 = Math.max(0, op.dipRect.y - op.dipRect.h);
-        const y2 = Math.min(
-            screenSize.height - op.dipRect.h,
-            op.dipRect.y + op.dipRect.h,
-        );
-        y =
-            Math.abs(y1 - y) > Math.abs(y2 - y)
-                ? Math.floor(y1)
-                : Math.floor(y2);
-    } else {
-        const x1 = Math.max(0, op.dipRect.x - op.dipRect.w);
-        const x2 = Math.min(
-            screenSize.width - op.dipRect.w,
-            op.dipRect.x + op.dipRect.w,
-        );
-        x =
-            Math.abs(x1 - x) > Math.abs(x2 - x)
-                ? Math.floor(x1)
-                : Math.floor(x2);
-    }
-    win.setBounds({
-        x: x,
-        y: y,
-        width: w,
-        height: h,
-    });
-
-    rendererPath(win, "translator.html");
-    if (dev) win.webContents.openDevTools();
-    win.webContents.on("did-finish-load", () => {
-        mainSend(win.webContents, "translatorInit", [
-            op.displayId,
-            screen.getAllDisplays(),
-            op.rect,
-        ]);
-    });
-    win.webContents.on("console-message", (d) => {
-        if (d.level !== "debug")
-            pushLog({
-                from: "translator",
-                lineCount: d.lineNumber,
-                message: d.message,
-                type: d.level,
-            });
-    });
-
-    win.setAlwaysOnTop(true, "screen-saver");
-}
-
-function createPhotoEditor(img: string) {
-    const win = new BrowserWindow(baseWinConfig());
-    win.maximize();
-
-    rendererPath(win, "photoEditor.html");
-    if (dev) win.webContents.openDevTools();
-
-    win.webContents.on("did-finish-load", () => {
-        mainSend(win.webContents, "superPhotoEditorInit", [img]);
-    });
-}
-
 // 主页面
 const mainWindowL: {
     [n: number]: {
@@ -1900,12 +1637,6 @@ async function createMainWindow(op: MainWinType) {
         mainWindow.webContents.setZoomFactor(store.get("全局.缩放") || 1.0);
         // 确保切换到index时能传递window_name
         mainSend(mainWindow.webContents, "editorInit", [windowName, op]);
-
-        if (op.type === "image" && op.arg0 === "ai") {
-            createBrowser(windowName, "./aiVision.html").then((c) => {
-                c?.executeJavaScript(`setImg("${op.content}")`);
-            });
-        }
     });
     mainWindow.webContents.on("console-message", (d) => {
         if (d.level !== "debug")
@@ -1995,7 +1726,7 @@ async function createBrowser(windowName: number, url: string) {
     minViews(mainWindow);
     const view = Date.now();
     let webPreferences: Electron.WebPreferences = {};
-    if (url.startsWith("translate") || url === "./aiVision.html") {
+    if (url.startsWith("translate")) {
         webPreferences = {
             nodeIntegration: true,
             contextIsolation: false,
@@ -2013,8 +1744,6 @@ async function createBrowser(windowName: number, url: string) {
         rendererPath2(searchView.webContents, "translate.html", {
             query: { text: url.replace("translate/?text=", "") },
         });
-    } else if (url === "./aiVision.html") {
-        rendererPath2(searchView.webContents, "aiVision.html", {});
     } else searchView.webContents.loadURL(url);
     const bSize = mainWindowL[windowName].browser;
     setViewSize(searchView, mainWindow, bSize);
@@ -2239,10 +1968,8 @@ mainOn("windowShow", (_, e) => {
     BrowserWindow.fromWebContents(e.sender)?.show();
 });
 
-mainOn("save_file_path", async ([type, isVideo]) => {
-    const savedPath = isVideo
-        ? store.get("保存.保存路径.视频") || ""
-        : store.get("保存.保存路径.图片") || "";
+mainOn("save_file_path", async ([type]) => {
+    const savedPath = store.get("保存.保存路径.图片") || "";
     const defaultPath = join(savedPath, `${getFileName()}.${type}`);
     if (store.get("保存.快速保存") && savedPath) {
         return defaultPath;
@@ -2250,20 +1977,14 @@ mainOn("save_file_path", async ([type, isVideo]) => {
     const x = await dialog.showSaveDialog({
         title: t("选择要保存的位置"),
         defaultPath: savedPath ? defaultPath : undefined,
-        filters: [
-            { name: isVideo ? t("视频") : t("图像"), extensions: [type] },
-        ],
+        filters: [{ name: t("图像"), extensions: [type] }],
     });
     return x.filePath;
 });
 
-mainOn("ok_save", ([arg, isVideo]) => {
+mainOn("ok_save", ([arg]) => {
     noti(arg);
-    if (isVideo) {
-        store.set("保存.保存路径.视频", dirname(arg));
-    } else {
-        store.set("保存.保存路径.图片", dirname(arg));
-    }
+    store.set("保存.保存路径.图片", dirname(arg));
 });
 
 mainOn("selectPath", async ([path, p]) => {
@@ -2300,13 +2021,6 @@ mainOn("getScreens", () => {
     return screen.getAllDisplays();
 });
 
-mainOn("recordMemWarning", () => {
-    new Notification({
-        title: `${app.name} ${t("录屏内存不足")}`,
-        body: t("将自动结束录屏"),
-    }).show();
-});
-
 mainOn("getLogs", () => {
     return logs;
 });
@@ -2337,38 +2051,30 @@ const defaultSetting: setting = {
         连拍: { key: "" },
         主页面: {},
         结束广截屏: { key: "" },
-        剪贴板贴图: { key: "" },
+        剪贴板贴图: { key: "Alt+B" },
     },
     点击托盘自动截图: process.platform !== "linux",
     全局工具快捷键: {
         close: "",
         ocr: "",
-        search: "",
-        QR: "",
         open: "",
         ding: "",
-        record: "",
-        long: "",
+        long: "Alt+Shift+L",
         copy: "",
         save: "",
         screens: "",
         translate: "",
-        editor: "",
     },
     工具快捷键: {
         close: "Escape",
         ocr: "Enter",
-        search: "",
-        QR: "",
         open: "",
         ding: "",
-        record: "",
         long: "",
         copy: isMac ? "Command+C" : "Control+C",
         save: isMac ? "Command+S" : "Control+S",
         screens: "",
         translate: "",
-        editor: "",
     },
     鼠标快捷键: {
         右键: "取色器",
@@ -2475,14 +2181,9 @@ const defaultSetting: setting = {
             "close",
             "screens",
             "ocr",
-            "search",
-            "QR",
             "open",
             "ding",
-            "record",
             "long",
-            "translate",
-            "editor",
             "copy",
             "save",
         ],
@@ -2575,43 +2276,13 @@ const defaultSetting: setting = {
             speed: "fast",
         },
     ],
-    AI: {
-        运行后端: "cpu",
-        在线模型: [],
-    },
-    在线OCR: {
-        baidu: {
-            url: "",
-            id: "",
-            secret: "",
-            time: 0,
-            token: "",
-        },
-        youdao: {
-            id: "",
-            secret: "",
-        },
-    },
-    以图搜图: {
-        引擎: "baidu",
-    },
-    自动打开链接: false,
-    自动搜索中文占比: 0.2,
-    浏览器中打开: false,
-    浏览器: {
-        标签页: {
-            自动关闭: true,
-            小: false,
-            灰度: false,
-        },
-    },
     保存: {
         默认格式: "png",
-        保存路径: { 图片: "", 视频: "" },
+        保存路径: { 图片: "" },
         快速保存: false,
         保存并复制: false,
     },
-    保存名称: { 前缀: "eSearch-", 时间: "YYYY-MM-DD-HH-mm-ss-S", 后缀: "" },
+    保存名称: { 前缀: "Screenshot-", 时间: "YYYY-MM-DD-HH-mm-ss-S", 后缀: "" },
     框选后默认操作: "no",
     快速截屏: { 模式: "clip", 路径: "" },
     引擎: {
@@ -2679,72 +2350,6 @@ const defaultSetting: setting = {
         模式: "小版本",
         忽略版本: "",
     },
-    录屏: {
-        模式: "normal",
-        自动录制: true,
-        自动录制延时: 3,
-        视频比特率: 2.5,
-        摄像头: {
-            开启: false,
-            镜像: false,
-            设备: "",
-            背景: {
-                模式: "none",
-                模糊: 40,
-                imgUrl: "",
-                videoUrl: "",
-                fit: "cover",
-            },
-        },
-        音频: {
-            设备列表: [],
-            启用系统内录: true,
-        },
-        转换: {
-            格式: "webm",
-            码率: 2.5,
-            帧率: 30,
-            其他: "",
-            高质量gif: false,
-            分段: 10,
-        },
-        提示: {
-            键盘: {
-                开启: false,
-                位置: { x: "+", y: "+", offsetX: 4, offsetY: 4 },
-                大小: 1,
-            },
-            鼠标: {
-                开启: false,
-            },
-            光标: {
-                开启: false,
-                样式: "width: 24px;\nheight: 24px;\nborder-radius: 50%;\nbackground-color: #ff08;",
-            },
-        },
-        大小: {
-            x: 0,
-            y: 0,
-            width: 800,
-            height: 600,
-        },
-        超级录屏: {
-            编码选择: "性能优先",
-            关键帧间隔: 150,
-            格式: "gif",
-            缩放: 2,
-            导出后关闭: false,
-        },
-    },
-    屏幕翻译: {
-        type: "ding",
-        dTime: 3000,
-        color: { bg: "rgb(255,255,255,0.5)", text: "" },
-        语言: {
-            from: "",
-            to: "",
-        },
-    },
     翻译: {
         翻译器: [],
         收藏: {
@@ -2765,7 +2370,6 @@ const defaultSetting: setting = {
         t: 800,
         方向: "y",
     },
-    高级图片编辑: { 配置: [], 默认配置: "" },
     网络: {
         github镜像: {
             启用: true,
@@ -2780,7 +2384,6 @@ const defaultSetting: setting = {
 };
 try {
     defaultSetting.保存.保存路径.图片 = app.getPath("pictures");
-    defaultSetting.保存.保存路径.视频 = app.getPath("videos");
 } catch (e) {
     console.error(e);
 }

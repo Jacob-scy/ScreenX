@@ -1205,12 +1205,9 @@ renderOn("addDing", ([wid, x, y, w, h, url, type]) => {
 
 let seg: Intl.Segmenter;
 try {
-    seg = new Intl.Segmenter(
-        store.get("屏幕翻译.语言.to") ?? navigator.language ?? "zh-HANS",
-        {
-            granularity: "word",
-        },
-    );
+    seg = new Intl.Segmenter(navigator.language ?? "zh-HANS", {
+        granularity: "word",
+    });
 } catch (error) {
     seg = new Intl.Segmenter("zh-HANS", {
         granularity: "word",

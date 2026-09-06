@@ -73,7 +73,6 @@ import { xget, xset } from "../../../lib/store/parse";
 import time_format from "../../../lib/time_format";
 import { safeJSONParse, tryD, tryx } from "../../../lib/utils";
 import type { IconType } from "../../iconTypes";
-import { runAI } from "../lib/ai";
 import { isDeepStrictEqual } from "../lib/isDeepStrictEqual";
 import { defaultOcrId } from "../ocr/ocr";
 import { ocrList } from "../ocr/ocr_omni";
@@ -82,7 +81,7 @@ let yauzl: typeof import("yauzl") | null = null;
 
 export { isDeepStrictEqual };
 
-type Engines = keyof typeof translator.e | "llm";
+type Engines = keyof typeof translator.e;
 
 type JustElmentK =
     | "_autostart"
@@ -95,7 +94,6 @@ type JustElmentK =
     | "_default_setting"
     | "_location"
     | "_logs"
-    | "_inpaint"
     | "_version"
     | "_exit";
 
@@ -127,22 +125,9 @@ const tools: { key: 功能; icon: string; title: string }[] = [
     { key: "close", icon: getImgUrl("close.svg"), title: t("关闭") },
     { key: "screens", icon: getImgUrl("screen.svg"), title: t("屏幕管理") },
     { key: "ocr", icon: getImgUrl("ocr.svg"), title: t("文字识别") },
-    { key: "search", icon: getImgUrl("search.svg"), title: t("以图搜图") },
-    { key: "QR", icon: getImgUrl("scan.svg"), title: t("二维码") },
     { key: "open", icon: getImgUrl("open.svg"), title: t("其他应用打开") },
     { key: "ding", icon: getImgUrl("ding.svg"), title: t("屏幕贴图") },
-    { key: "record", icon: getImgUrl("record.svg"), title: t("录屏") },
-    { key: "long", icon: getImgUrl("long_clip.svg"), title: t("广截屏") },
-    {
-        key: "translate",
-        icon: getImgUrl("translate.svg"),
-        title: t("屏幕翻译"),
-    },
-    {
-        key: "editor",
-        icon: getImgUrl("super_edit.svg"),
-        title: t("高级图片编辑"),
-    },
+    { key: "long", icon: getImgUrl("long_clip.svg"), title: t("万向滚动截图") },
     { key: "copy", icon: getImgUrl("copy.svg"), title: t("复制") },
     { key: "save", icon: getImgUrl("save.svg"), title: t("保存") },
 ];
@@ -473,439 +458,6 @@ const s: Partial<settingItem<SettingPath>> = {
         name: "离线OCR",
         el: () => ocrEl(),
     },
-    "在线OCR.baidu.url": {
-        name: "百度OCR类型",
-        desc: "位置版不起实质效果，但可以扩充免费使用次数:)",
-        el: () =>
-            xSelect(
-                [
-                    {
-                        value: "https://aip.baidubce.com/rest/2.0/ocr/v1/general",
-                        name: "标准含位置版",
-                    },
-                    {
-                        value: "https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic",
-                        name: "标准版",
-                    },
-                    {
-                        value: "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate",
-                        name: "高精度含位置版",
-                    },
-                    {
-                        value: "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic",
-                        name: "高精度版",
-                    },
-                    {
-                        value: "https://aip.baidubce.com/rest/2.0/ocr/v1/formula",
-                        name: "公式",
-                    },
-                    {
-                        value: "https://aip.baidubce.com/rest/2.0/ocr/v1/handwriting",
-                        name: "手写文字",
-                    },
-                    {
-                        value: "https://aip.baidubce.com/rest/2.0/ocr/v1/table",
-                        name: "表格",
-                    },
-                ],
-                "百度OCR类型",
-            ),
-    },
-    "在线OCR.baidu.id": {
-        name: "API Key",
-        el: () => xSecret(),
-    },
-    "在线OCR.baidu.secret": {
-        name: "Secret Key",
-        el: () => xSecret(),
-    },
-    "在线OCR.youdao.id": {
-        name: "应用ID",
-        el: () => xSecret(),
-    },
-    "在线OCR.youdao.secret": {
-        name: "应用秘钥",
-        el: () => xSecret(),
-    },
-    "AI.运行后端": {
-        name: "运行后端",
-        el: (v) =>
-            xSelect<typeof v>(
-                [
-                    { value: "cpu", name: noI18n("CPU") },
-                    { value: "webgpu", name: noI18n("WebGPU") },
-                    ...(process.platform === "linux"
-                        ? [{ value: "cuda" as const, name: noI18n("CUDA") }]
-                        : []),
-                    ...(process.platform === "darwin"
-                        ? [{ value: "coreml" as const, name: noI18n("coreML") }]
-                        : []),
-                    ...(process.platform === "win32"
-                        ? [
-                              {
-                                  value: "directml" as const,
-                                  name: noI18n("DirectML"),
-                              },
-                          ]
-                        : []),
-                ],
-                "运行后端",
-            ),
-    },
-    "AI.在线模型": {
-        name: "在线模型",
-        el: (v) =>
-            sortList<(typeof v)[0]>(
-                (v) => v.name,
-                (_item, dialog) => {
-                    const { promise, resolve } =
-                        Promise.withResolvers<typeof _item>();
-                    const item = _item || {
-                        name: "",
-                        url: "",
-                        key: "",
-                        supportVision: false,
-                        model: "",
-                        type: "chatgpt",
-                        config: {},
-                    };
-
-                    const nameEl = input().sv(item.name);
-                    const urlEl = input().sv(item.url);
-                    const keyEl = input().sv(item.key);
-                    const modelEl = input().sv(item.model ?? "");
-                    const fetchModelList = button("获取模型列表").on(
-                        "click",
-                        async () => {
-                            const [r, error] = tryx(async () => {
-                                const url = urlEl.gv;
-                                const key = keyEl.gv;
-                                const res = await fetch(
-                                    new URL("models", url),
-                                    {
-                                        headers: {
-                                            Authorization: `Bearer ${key}`,
-                                        },
-                                    },
-                                );
-                                const data = (await res.json()) as {
-                                    data: { id: string }[];
-                                };
-                                modelListEl.clear().add(
-                                    data.data.map((i) =>
-                                        button()
-                                            .add(i.id)
-                                            .on("click", () =>
-                                                modelEl.sv(i.id),
-                                            ),
-                                    ),
-                                );
-                            });
-                            if (error) {
-                                console.error(error);
-                            } else {
-                                console.log(r);
-                            }
-                        },
-                    );
-                    const modelListEl = xGroup("x").style({
-                        width: baseWidth,
-                        maxHeight: "200px",
-                        overflowY: "auto",
-                    });
-                    const configEl = textarea()
-                        .bindSet((v, el) => {
-                            try {
-                                el.value = JSON.stringify(v, null, 2);
-                            } catch (e) {
-                                el.value = "{}";
-                            }
-                        })
-                        .bindGet((el) => {
-                            return safeJSONParse<Record<string, unknown>>(
-                                el.value,
-                                {},
-                            );
-                        })
-                        .sv(item.config)
-                        .style(textStyle(6));
-                    const supportVision = check("vision").sv(
-                        item.supportVision,
-                    );
-
-                    const testResult = txt();
-
-                    dialogB(
-                        dialog,
-                        [
-                            xGroup("y").add([
-                                view().add(["名称", ele("br"), nameEl]),
-                                view().add([noI18n("URL"), ele("br"), urlEl]),
-                                view().add([noI18n("key"), ele("br"), keyEl]),
-                                view().add([
-                                    fetchModelList,
-                                    ele("br"),
-                                    modelListEl,
-                                ]),
-                                view().add(["模型名称", ele("br"), modelEl]),
-                                view().add([
-                                    "请求体自定义",
-                                    ele("br"),
-                                    configEl,
-                                ]),
-                                label([supportVision, "支持图像识别"]),
-                                view().add([
-                                    button("测试").on("click", async () => {
-                                        testResult.sv("测试中...");
-                                        const [r, error] = tryx(async () => {
-                                            const t = runAI(
-                                                [
-                                                    {
-                                                        role: "user",
-                                                        content: {
-                                                            text: "Say this is a test",
-                                                        },
-                                                    },
-                                                ],
-                                                {
-                                                    config: configEl.gv,
-                                                    url: urlEl.gv,
-                                                    key: keyEl.gv,
-                                                    model: modelEl.gv,
-                                                },
-                                            ).text;
-
-                                            await t;
-                                        });
-                                        await r;
-                                        if (error) {
-                                            testResult.sv(
-                                                noI18n(
-                                                    `${t("测试失败：")} ${error.message}`,
-                                                ),
-                                            );
-                                        } else {
-                                            testResult.sv("测试成功");
-                                        }
-                                    }),
-                                    testResult,
-                                ]),
-                            ]),
-                        ],
-                        () => resolve(null),
-                        () =>
-                            resolve({
-                                name: nameEl.gv,
-                                type: "chatgpt",
-                                url: urlEl.gv,
-                                key: keyEl.gv,
-                                model: modelEl.gv,
-                                config: configEl.gv,
-                                supportVision: supportVision.gv,
-                            }),
-                    );
-
-                    return promise;
-                },
-            ),
-    },
-    "录屏.自动录制": {
-        name: "自动录制",
-        desc: "超级录屏默认开启",
-        el: () => xSwitch(),
-    },
-    "录屏.自动录制延时": {
-        name: "自动录制",
-        el: () => xNumber("s", { min: 0, max: 10 }),
-    },
-    "录屏.视频比特率": {
-        name: "视频比特率",
-        el: () => xNumber("Mbps", { min: 1, max: 40, step: 0.5 }),
-    },
-    "录屏.提示.键盘.开启": {
-        name: "录屏键盘提示",
-        el: () => xSwitch(),
-    },
-    "录屏.提示.键盘.位置": {
-        name: "键盘提示位置",
-        el: (v) => {
-            let nv: typeof v = { x: "+", y: "-", offsetX: 0, offsetY: 0 };
-            const screenKeyTipEl = view().style({
-                width: "500px",
-                height: "200px",
-                outline: `1px dashed ${cssColor.b}`,
-                position: "relative",
-            });
-            const screenKeyTipKBD = view()
-                .style({ position: "absolute", cursor: "move" })
-                .add([
-                    ele("kbd").add(noI18n("Ctrl")),
-                    ele("kbd").add(noI18n("Shift")),
-                    ele("kbd").add(noI18n("I")),
-                ])
-                .addInto(screenKeyTipEl);
-
-            function setKeyTip() {
-                const posi = nv;
-                const px = posi.x === "+" ? "right" : "left";
-                const py = posi.y === "+" ? "bottom" : "top";
-                for (const x of ["left", "right", "top", "bottom"] as const) {
-                    screenKeyTipKBD.el.style[x] = "";
-                }
-                screenKeyTipKBD.style({
-                    [px]: `${posi.offsetX}px`,
-                    [py]: `${posi.offsetY}px`,
-                    fontSize: `${getSet("录屏.提示.键盘.大小") * 16}px`,
-                });
-            }
-
-            trackPoint(screenKeyTipKBD, {
-                start: () => {
-                    return {
-                        x: 0,
-                        y: 0,
-                        data: screenKeyTipEl.el.getBoundingClientRect(),
-                    };
-                },
-                ing: (_p, e, { startData: pr }) => {
-                    const x = (e.clientX - pr.left) / pr.width;
-                    const y = (e.clientY - pr.top) / pr.height;
-                    nv.x = x < 0.5 ? "-" : "+";
-                    nv.y = y < 0.5 ? "-" : "+";
-                    setKeyTip();
-                },
-                end: () => {
-                    screenKeyTipEl.el.dispatchEvent(new CustomEvent("input"));
-                },
-            });
-
-            return view()
-                .class(blockSetting)
-                .add(screenKeyTipEl)
-                .bindGet(() => nv)
-                .bindSet((v) => {
-                    nv = v;
-                    setKeyTip();
-                });
-        },
-    },
-    "录屏.提示.键盘.位置.offsetX": {
-        name: "键盘提示偏移x",
-        el: () => xNumber("px", { min: 0 }),
-    },
-    "录屏.提示.键盘.位置.offsetY": {
-        name: "键盘提示偏移y",
-        el: () => xNumber("px", { min: 0 }),
-    },
-    "录屏.提示.键盘.大小": {
-        name: "键盘提示大小",
-        el: () => xNumber("", { min: 0.25, max: 5, step: 0.25 }),
-    },
-    "录屏.提示.鼠标.开启": {
-        name: "鼠标按键提示",
-        el: () => xSwitch(),
-    },
-    "录屏.提示.光标.开启": {
-        name: "开启光标提示",
-        el: () => xSwitch(),
-    },
-    "录屏.提示.光标.样式": {
-        name: "光标提示样式",
-        el: () => ele("textarea").class(blockSetting),
-    },
-    "录屏.摄像头.开启": {
-        name: "开启摄像头",
-        el: () => xSwitch(),
-    },
-    "录屏.摄像头.镜像": {
-        name: "镜像",
-        el: () => xSwitch(),
-    },
-    "录屏.摄像头.背景.模式": {
-        name: "摄像头背景",
-        el: (v) =>
-            xSelect<typeof v>(
-                [
-                    { value: "none", name: "正常" },
-                    { value: "hide", name: "隐藏" },
-                    { value: "blur", name: "模糊" },
-                    { value: "img", name: "图片" },
-                    { value: "video", name: "视频" },
-                ],
-                "摄像头背景",
-            ),
-    },
-    "录屏.摄像头.背景.模糊": {
-        name: "背景模糊程度",
-        el: () => xNumber("px", { min: 1 }),
-    },
-    "录屏.摄像头.背景.imgUrl": { name: "背景图片路径", el: () => xPath(false) },
-    "录屏.摄像头.背景.videoUrl": {
-        name: "背景视频路径",
-        el: () => xPath(false),
-    },
-    "录屏.摄像头.背景.fit": {
-        name: "图片或视频填充模式",
-        el: (v) =>
-            xSelect<typeof v>(
-                [
-                    { value: "cover", name: "裁剪适应" },
-                    { value: "fit", name: "拉伸填充" },
-                ],
-                "图片或视频填充模式",
-            ),
-    },
-    "录屏.音频.启用系统内录": {
-        name: "系统内录",
-        desc: "开启才可以在界面进一步选择是否内录",
-        el: () => xSwitch(),
-    },
-    "录屏.转换.分段": {
-        name: "分段转换间隔时间",
-        desc: "边录制边转换以提升效率，0为不分段",
-        el: () => xNumber("s"),
-    },
-    "录屏.转换.格式": {
-        name: "输出格式",
-        el: () => input(),
-    },
-    "录屏.转换.码率": {
-        name: "码率",
-        desc: "超级录屏也适用",
-        el: () => xNumber("Mbps"),
-    },
-    "录屏.转换.帧率": {
-        name: "帧率",
-        desc: "超级录屏也适用",
-        el: () => xNumber("fps"),
-    },
-    "录屏.转换.其他": {
-        name: "FFmpeg其他参数",
-        el: () => input(),
-    },
-    "录屏.转换.高质量gif": {
-        name: "高质量 Gif",
-        desc: "转换时速度会很慢",
-        el: () => xSwitch(),
-    },
-    "录屏.超级录屏.编码选择": {
-        name: "编码选择",
-        desc: "视具体硬件支持",
-        el: (v) =>
-            xSelect<typeof v>(
-                [{ value: "性能优先" }, { value: "内存优先" }],
-                "编码选择",
-            ),
-    },
-    "录屏.超级录屏.关键帧间隔": {
-        name: "关键帧间隔",
-        desc: "越小处理速度越快，但会增加内存占用",
-        el: () => xNumber("", { max: 500, min: 1 }),
-    },
-    "录屏.超级录屏.导出后关闭": {
-        name: "导出后关闭",
-        el: () => xSwitch(),
-    },
     "保存名称.前缀": {
         name: "文件名称前缀",
         el: () => input(),
@@ -1021,48 +573,6 @@ const s: Partial<settingItem<SettingPath>> = {
                 (el, d) => translatorD(el, d),
             ),
     },
-    "屏幕翻译.语言.from": {
-        name: "屏幕翻译语言来源",
-        el: () => {
-            const firstItem = getSet("翻译.翻译器").at(0);
-            const e = translator.getEngine(firstItem?.type ?? "");
-            if (!e) return select([]);
-            const list = select(
-                getLansName(e.lan).map((i) => ({
-                    value: i.lan,
-                    name: noI18n(i.text),
-                })),
-            );
-            return list;
-        },
-    },
-    "屏幕翻译.语言.to": {
-        name: "屏幕翻译语言目标",
-        el: () => {
-            const firstItem = getSet("翻译.翻译器").at(0);
-            const e = translator.getEngine(firstItem?.type ?? "");
-            if (!e) return select([]);
-            const list = select(
-                getLansName(e.targetLan).map((i) => ({
-                    value: i.lan,
-                    name: noI18n(i.text),
-                })),
-            );
-            return list;
-        },
-    },
-    "屏幕翻译.dTime": {
-        name: "自动屏幕翻译定时",
-        el: () => xNumber("ms"),
-    },
-    "屏幕翻译.color.bg": {
-        name: "屏幕翻译背景色",
-        el: () => xColor(),
-    },
-    "屏幕翻译.color.text": {
-        name: "屏幕翻译文字颜色",
-        el: () => xColor(),
-    },
     "翻译.收藏.文件": {
         name: "文件生词本",
         el: (v) =>
@@ -1134,15 +644,6 @@ const s: Partial<settingItem<SettingPath>> = {
         desc: "识屏或直接打开主页面，若文字为一行，则自动搜索",
         el: () => xSwitch(),
     },
-    自动打开链接: {
-        name: "自动打开链接",
-        el: () => xSwitch(),
-    },
-    自动搜索中文占比: {
-        name: "自动搜索中文占比",
-        desc: "在中英混合中，数值越小，则整段文字越容易被程序认为是中文主要", // todo 用语言库 区分母语
-        el: () => xNumber("", { min: 0.002, max: 1, step: 0.01 }),
-    },
     "引擎.搜索": {
         name: "搜索引擎",
         el: (v) =>
@@ -1158,26 +659,6 @@ const s: Partial<settingItem<SettingPath>> = {
                 (v) => v.name,
                 (_v, d) => searchEngineDialog(_v, d),
             ),
-    },
-    浏览器中打开: {
-        name: "浏览器中打开",
-        desc: "点击搜索或翻译按钮后，将在系统默认浏览器打开搜索结果，否则在一个新的软件窗口打开",
-        el: () => xSwitch(),
-    },
-    "浏览器.标签页.自动关闭": {
-        name: "搜索窗口自动关闭",
-        desc: "浏览器打开后自动关闭标签页",
-        el: () => xSwitch(),
-    },
-    "浏览器.标签页.小": {
-        name: "标签缩小",
-        desc: "标签将只显示图标，悬浮查看标题，中键或右键关闭",
-        el: () => xSwitch(),
-    },
-    "浏览器.标签页.灰度": {
-        name: "标签图标灰度",
-        desc: "标签图标将以灰度图片展示，减少多余颜色的干扰",
-        el: () => xSwitch(),
     },
     "快捷键.自动识别.key": {
         name: "自动识别",
@@ -1219,14 +700,6 @@ const s: Partial<settingItem<SettingPath>> = {
         name: getToolsN("ocr"),
         el: () => hotkeyX(["ocr", "2"], "ocr"),
     },
-    "全局工具快捷键.search": {
-        name: getToolsN("search"),
-        el: () => hotkeyX(["search", "2"], "search"),
-    },
-    "全局工具快捷键.QR": {
-        name: getToolsN("QR"),
-        el: () => hotkeyX(["QR", "2"], "scan"),
-    },
     "全局工具快捷键.open": {
         name: getToolsN("open"),
         el: () => hotkeyX(["open", "2"], "open"),
@@ -1234,10 +707,6 @@ const s: Partial<settingItem<SettingPath>> = {
     "全局工具快捷键.ding": {
         name: getToolsN("ding"),
         el: () => hotkeyX(["ding", "2"], "ding"),
-    },
-    "全局工具快捷键.record": {
-        name: getToolsN("record"),
-        el: () => hotkeyX(["record", "2"], "record"),
     },
     "全局工具快捷键.long": {
         name: getToolsN("long"),
@@ -1251,14 +720,6 @@ const s: Partial<settingItem<SettingPath>> = {
         name: getToolsN("save"),
         el: () => hotkeyX(["save", "2"], "save"),
     },
-    "全局工具快捷键.translate": {
-        name: getToolsN("translate"),
-        el: () => hotkeyX(["translate", "2"], "translate"),
-    },
-    "全局工具快捷键.editor": {
-        name: getToolsN("editor"),
-        el: () => hotkeyX(["editor", "2"], "super_edit"),
-    },
     "工具快捷键.close": {
         name: getToolsN("close"),
         el: () => hotkeyP("close"),
@@ -1267,14 +728,6 @@ const s: Partial<settingItem<SettingPath>> = {
         name: getToolsN("ocr"),
         el: () => hotkeyP("ocr"),
     },
-    "工具快捷键.search": {
-        name: getToolsN("search"),
-        el: () => hotkeyP("search"),
-    },
-    "工具快捷键.QR": {
-        name: getToolsN("QR"),
-        el: () => hotkeyP("scan"),
-    },
     "工具快捷键.open": {
         name: getToolsN("open"),
         el: () => hotkeyP("open"),
@@ -1282,10 +735,6 @@ const s: Partial<settingItem<SettingPath>> = {
     "工具快捷键.ding": {
         name: getToolsN("ding"),
         el: () => hotkeyP("ding"),
-    },
-    "工具快捷键.record": {
-        name: getToolsN("record"),
-        el: () => hotkeyP("record"),
     },
     "工具快捷键.long": {
         name: getToolsN("long"),
@@ -1298,14 +747,6 @@ const s: Partial<settingItem<SettingPath>> = {
     "工具快捷键.save": {
         name: getToolsN("save"),
         el: () => hotkeyP("save"),
-    },
-    "工具快捷键.translate": {
-        name: getToolsN("translate"),
-        el: () => hotkeyP("translate"),
-    },
-    "工具快捷键.editor": {
-        name: getToolsN("editor"),
-        el: () => hotkeyP("super_edit"),
     },
     "截屏编辑快捷键.select.键": {
         name: "选择与控制",
@@ -1866,11 +1307,6 @@ const xs: Record<
             return view().class(blockSetting).add(el);
         },
     },
-    _inpaint: {
-        name: "魔法橡皮模型",
-        desc: "高级图片编辑中魔法橡皮使用的模型",
-        el: () => inpaintEl(),
-    },
     _theme: {
         name: "样式预览",
         el: () =>
@@ -2097,100 +1533,44 @@ const main: {
 }[] = [
     { pageName: "常用", isMemo: true },
     {
-        pageName: "截屏",
+        pageName: "截图与保存",
         items: [
             {
-                title: "工具栏",
+                title: "截图设置",
                 settings: [
                     "工具栏跟随",
                     "工具栏.按钮大小",
                     "工具栏.按钮图标比例",
                     "工具栏.功能",
-                    "工具栏.初始位置",
-                    "工具栏.稍后出现",
-                ],
-            },
-            { title: "鼠标跟随栏", settings: ["鼠标跟随栏.显示"] },
-            {
-                title: "取色器",
-                settings: [
-                    "取色器.显示",
-                    "取色器.大小",
-                    "取色器.像素大小",
-                    "_qsq",
-                    "取色器.默认格式",
-                ],
-            },
-            {
-                title: "框选",
-                settings: [
                     "框选.颜色.遮罩",
                     "显示四角坐标",
                     "框选后默认操作",
-                    "框选.识别窗口",
-                    "框选.自动框选.图像识别",
-                    "框选.自动框选.最小阈值",
-                    "框选.自动框选.最大阈值",
-                    "框选.记忆.开启",
-                    "框选.参考线.选区",
-                    "框选.颜色.选区参考线",
+                    "鼠标快捷键.右键",
+                    "鼠标快捷键.双击",
+                    "广截屏.模式",
+                    "广截屏.t",
                 ],
             },
             {
-                title: "光标",
-                settings: ["框选.参考线.光标", "框选.颜色.光标参考线"],
-            },
-            {
-                title: "快速截屏",
-                settings: ["快速截屏.模式", "快速截屏.路径"],
-            },
-            { title: "连拍", settings: ["连拍.数", "连拍.间隔"] },
-            { title: "广截屏", settings: ["广截屏.模式", "广截屏.t"] },
-            {
-                title: "鼠标快捷键",
-                settings: ["鼠标快捷键.右键", "鼠标快捷键.双击"],
-            },
-        ],
-    },
-    {
-        pageName: "图像编辑",
-        items: [
-            {
-                title: "默认属性",
+                title: "保存设置",
                 settings: [
-                    "图像编辑.默认属性.填充颜色",
-                    "图像编辑.默认属性.边框颜色",
-                    "图像编辑.默认属性.边框宽度",
-                    "图像编辑.默认属性.画笔颜色",
-                    "图像编辑.默认属性.画笔粗细",
-                ],
-            },
-            {
-                title: "复制偏移",
-                desc: "复制完一个元素后，为了分辨，可以让其偏移",
-                settings: ["图像编辑.复制偏移.x", "图像编辑.复制偏移.y"],
-            },
-            {
-                title: "箭头样式",
-                settings: [
-                    "图像编辑.arrow.type",
-                    "图像编辑.arrow.w",
-                    "图像编辑.arrow.h",
+                    "快速截屏.路径",
+                    "保存.默认格式",
+                    "保存.保存并复制",
+                    "保存.快速保存",
+                    "保存名称.前缀",
+                    "保存名称.时间",
+                    "保存名称.后缀",
                 ],
             },
         ],
     },
     {
-        pageName: "文字识别（OCR）",
-        settings: [
-            "OCR.类型",
-            "OCR.离线切换",
-            "主页面.自动复制OCR",
-            "主页面.复制OCR后提示",
-        ],
+        pageName: "文字识别 (OCR)",
+        settings: ["OCR.类型", "主页面.自动复制OCR", "主页面.复制OCR后提示"],
         items: [
             {
-                title: "离线OCR",
+                title: "离线 OCR 模型",
                 settings: [
                     "离线OCR",
                     "OCR.全局det路径",
@@ -2198,365 +1578,62 @@ const main: {
                     "OCR.整体方向识别",
                 ],
             },
-            {
-                title: "百度OCR",
-                settings: [
-                    "在线OCR.baidu.url",
-                    "在线OCR.baidu.id",
-                    "在线OCR.baidu.secret",
-                ],
-            },
-            {
-                title: "有道OCR",
-                settings: ["在线OCR.youdao.id", "在线OCR.youdao.secret"],
-            },
         ],
     },
     {
-        pageName: "人工智能",
-        desc: "配置OCR、录屏背景移除等人工智能",
-        settings: ["AI.运行后端", "AI.在线模型"],
-        items: [{ title: "魔法橡皮模型", settings: ["_inpaint"] }],
-    },
-    {
-        pageName: "录屏",
-        desc: "分为标准录屏和超级录屏，标准录屏适合长时间录制，超级录屏适合录制操作演示，提供自动运镜效果",
+        pageName: "搜索",
         items: [
             {
-                title: "自动录制",
-                settings: ["录屏.自动录制", "录屏.自动录制延时"],
-            },
-            { title: "录制", settings: ["录屏.视频比特率"] },
-            {
-                title: "提示",
-                settings: [
-                    "录屏.提示.键盘.开启",
-                    "录屏.提示.键盘.位置",
-                    "录屏.提示.键盘.位置.offsetX",
-                    "录屏.提示.键盘.位置.offsetY",
-                    "录屏.提示.键盘.大小",
-                    "录屏.提示.鼠标.开启",
-                    "录屏.提示.光标.开启",
-                    "录屏.提示.光标.样式",
-                ],
-            },
-            {
-                title: "摄像头",
-                settings: [
-                    "录屏.摄像头.开启",
-                    "录屏.摄像头.镜像",
-                    "录屏.摄像头.背景.模式",
-                    "录屏.摄像头.背景.模糊",
-                    "录屏.摄像头.背景.imgUrl",
-                    "录屏.摄像头.背景.videoUrl",
-                    "录屏.摄像头.背景.fit",
-                ],
-            },
-            {
-                title: "音频",
-                settings: ["录屏.音频.启用系统内录"],
-            },
-            {
-                title: "转换",
-                settings: [
-                    "录屏.转换.分段",
-                    "录屏.转换.格式",
-                    "录屏.转换.码率",
-                    "录屏.转换.帧率",
-                    "录屏.转换.其他",
-                    "录屏.转换.高质量gif",
-                ],
-            },
-            {
-                title: "超级录屏",
-                settings: [
-                    "录屏.超级录屏.编码选择",
-                    "录屏.超级录屏.关键帧间隔",
-                    "录屏.超级录屏.导出后关闭",
-                ],
+                title: "搜索引擎",
+                settings: ["引擎.搜索", "自动搜索"],
             },
         ],
     },
     {
-        pageName: "保存",
-        settings: [
-            "保存名称.前缀",
-            "保存名称.时间",
-            "保存名称.后缀",
-            "_filename",
-            "保存.保存并复制",
-            "保存.快速保存",
-            "保存.默认格式",
-        ],
+        pageName: "翻译",
+        settings: ["翻译.翻译器"],
     },
     {
         pageName: "贴图",
         settings: ["贴图.窗口.双击", "贴图.窗口.变换", "贴图.窗口.提示"],
     },
     {
-        pageName: "翻译",
-        settings: ["翻译.翻译器"],
-        items: [
-            {
-                title: "屏幕翻译",
-                settings: [
-                    "屏幕翻译.语言.from",
-                    "屏幕翻译.语言.to",
-                    "屏幕翻译.dTime",
-                    "屏幕翻译.color.bg",
-                    "屏幕翻译.color.text",
-                ],
-            },
-            {
-                title: "生词本",
-                settings: ["翻译.收藏.文件", "翻译.收藏.fetch"],
-            },
-        ],
-    },
-    {
-        pageName: "编辑器",
-        items: [
-            {
-                title: "编辑器",
-                settings: [
-                    "字体.大小",
-                    "编辑器.自动换行",
-                    "编辑器.拼写检查",
-                    "编辑器.行号",
-                ],
-            },
-            {
-                title: "历史记录",
-                settings: [
-                    "历史记录设置.保留历史记录",
-                    "历史记录设置.自动清除历史记录",
-                    "历史记录设置.d",
-                    "时间格式",
-                    "_clear_history",
-                ],
-            },
-            {
-                title: "界面",
-                settings: ["主页面.显示图片区", "主页面.复用后聚焦"],
-            },
-        ],
-    },
-    {
-        pageName: "搜索与浏览",
-        items: [
-            {
-                title: "自动",
-                settings: ["自动搜索", "自动打开链接", "自动搜索中文占比"],
-            },
-            { title: "引擎", settings: ["引擎.搜索", "引擎.翻译"] },
-            {
-                title: "浏览",
-                settings: [
-                    "浏览器中打开",
-                    "浏览器.标签页.自动关闭",
-                    "浏览器.标签页.小",
-                    "浏览器.标签页.灰度",
-                    "_clear_browswer",
-                ],
-            },
-        ],
-    },
-    {
         pageName: "快捷键",
         items: [
             {
-                title: "全局功能",
+                title: "全局快捷键",
                 settings: [
-                    "快捷键.自动识别.key",
                     "快捷键.截屏搜索.key",
+                    "快捷键.自动识别.key",
                     "快捷键.选中搜索.key",
                     "快捷键.剪贴板搜索.key",
                     "快捷键.快速截屏.key",
-                    "快捷键.连拍.key",
-                    "快捷键.结束广截屏.key",
                     "快捷键.剪贴板贴图.key",
+                    "快捷键.结束广截屏.key",
                     "快捷键.主页面.key",
                 ],
             },
             {
-                title: "截屏工具栏",
+                title: "截屏工具栏快捷键",
                 settings: [
                     "工具快捷键.close",
                     "工具快捷键.ocr",
-                    "工具快捷键.search",
-                    "工具快捷键.QR",
                     "工具快捷键.open",
                     "工具快捷键.ding",
-                    "工具快捷键.record",
                     "工具快捷键.long",
                     "工具快捷键.copy",
                     "工具快捷键.save",
-                    "工具快捷键.translate",
-                    "工具快捷键.editor",
-                ],
-            },
-            {
-                title: "截屏编辑栏",
-                settings: [
-                    "截屏编辑快捷键.select.键",
-                    "截屏编辑快捷键.draw.键",
-                    "截屏编辑快捷键.shape.键",
-                    "截屏编辑快捷键.filter.键",
-                ],
-            },
-            {
-                title: "截屏选择与控制",
-                settings: [
-                    "截屏编辑快捷键.select.副.rect",
-                    "截屏编辑快捷键.select.副.free",
-                    "截屏编辑快捷键.select.副.draw",
-                ],
-            },
-            {
-                title: "截屏自由绘画",
-                settings: [
-                    "截屏编辑快捷键.draw.副.free",
-                    "截屏编辑快捷键.draw.副.eraser",
-                ],
-            },
-            {
-                title: "截屏形状和文字",
-                settings: [
-                    "截屏编辑快捷键.shape.副.line",
-                    "截屏编辑快捷键.shape.副.circle",
-                    "截屏编辑快捷键.shape.副.rect",
-                    "截屏编辑快捷键.shape.副.polyline",
-                    "截屏编辑快捷键.shape.副.polygon",
-                    "截屏编辑快捷键.shape.副.text",
-                    "截屏编辑快捷键.shape.副.number",
-                    "截屏编辑快捷键.shape.副.arrow",
-                ],
-            },
-            {
-                title: "截屏大小栏",
-                settings: [
-                    "大小栏快捷键.左上x",
-                    "大小栏快捷键.左上y",
-                    "大小栏快捷键.右下x",
-                    "大小栏快捷键.右下y",
-                    "大小栏快捷键.宽",
-                    "大小栏快捷键.高",
-                ],
-            },
-            {
-                title: "截屏其他",
-                settings: ["其他快捷键.复制颜色", "其他快捷键.隐藏或显示栏"],
-            },
-            {
-                title: "框选后默认操作",
-                desc: "与工具栏快捷键不同，此快捷键全局生效",
-                settings: [
-                    "全局工具快捷键.ocr",
-                    "全局工具快捷键.search",
-                    "全局工具快捷键.QR",
-                    "全局工具快捷键.open",
-                    "全局工具快捷键.ding",
-                    "全局工具快捷键.record",
-                    "全局工具快捷键.long",
-                    "全局工具快捷键.copy",
-                    "全局工具快捷键.save",
-                    "全局工具快捷键.translate",
-                    "全局工具快捷键.editor",
-                ],
-            },
-            {
-                title: "主页面",
-                settings: [
-                    "主页面快捷键.搜索",
-                    "主页面快捷键.翻译",
-                    "主页面快捷键.打开链接",
-                    "主页面快捷键.删除换行",
-                    "主页面快捷键.图片区",
-                    "主页面快捷键.关闭",
                 ],
             },
         ],
     },
     {
-        pageName: "全局",
+        pageName: "常规与启动",
         items: [
             { title: "启动", settings: ["_autostart", "启动提示"] },
             { title: "语言", settings: ["语言.语言"] },
-            { title: "托盘", settings: ["托盘"] },
-            {
-                title: "主搜索功能",
-                settings: [
-                    "主搜索功能.自动搜索排除",
-                    "主搜索功能.剪贴板选区搜索",
-                    "主搜索功能.截屏搜索延迟",
-                ],
-            },
-            {
-                title: "代理",
-                settings: [
-                    "代理.mode",
-                    "代理.pacScript",
-                    "代理.proxyRules",
-                    "代理.proxyBypassRules",
-                ],
-            },
-        ],
-    },
-    {
-        pageName: "样式",
-        settings: ["全局.缩放", "_theme"],
-        items: [
-            {
-                title: "颜色",
-                settings: ["全局.主题", "全局.深色模式"],
-            },
-            {
-                title: "毛玻璃效果",
-                settings: ["全局.模糊", "全局.不透明度"],
-            },
-            {
-                title: "字体",
-                settings: ["字体.主要字体", "字体.等宽字体"],
-            },
-        ],
-    },
-    {
-        pageName: "高级",
-        items: [
-            {
-                title: "高级设置",
-                settings: ["_setting_file", "_default_setting", "硬件加速"],
-            },
-            {
-                title: "截屏",
-                settings: ["使用XDGDesktopPortal"],
-            },
-            {
-                title: "外部截屏器",
-                settings: [
-                    "额外截屏器.命令",
-                    "额外截屏器.位置",
-                    "自定义屏幕属性",
-                ],
-            },
-            { title: "后台", settings: ["保留截屏窗口"] },
-            {
-                title: "GitHub镜像",
-                settings: [
-                    "网络.github镜像.启用",
-                    "网络.github镜像.base",
-                    "网络.github镜像.api",
-                ],
-            },
-            {
-                title: "检查更新",
-                settings: ["更新.频率", "更新.模式", "更新.忽略版本"],
-            },
-            { title: "开发者模式", settings: ["dev"] },
-            { title: "位置信息", settings: ["_location"] },
-            { title: "获取日志", settings: ["_logs"] },
-            { title: "版本信息", settings: ["_version"] },
-            { title: "退出应用", settings: ["_exit"] },
+            { title: "系统托盘", settings: ["托盘", "点击托盘自动截图"] },
+            { title: "关于与退出", settings: ["_version", "_exit"] },
         ],
     },
 ];
@@ -2584,11 +1661,6 @@ console.log("s-m", sKeys.difference(mKeys), "m-s", mKeys.difference(sKeys));
 
 const bind: { [k in KeyPath]?: KeyPath[] } = {
     离线OCR: ["OCR.类型"],
-    "AI.在线模型": ["OCR.类型"],
-    "翻译.翻译器": ["屏幕翻译.语言.from", "屏幕翻译.语言.to"],
-    "录屏.提示.键盘.位置.offsetX": ["录屏.提示.键盘.位置"],
-    "录屏.提示.键盘.位置.offsetY": ["录屏.提示.键盘.位置"],
-    "录屏.提示.键盘.大小": ["录屏.提示.键盘.位置"],
     "保存名称.前缀": ["_filename"],
     "保存名称.时间": ["_filename"],
     "保存名称.后缀": ["_filename"],
@@ -2656,7 +1728,6 @@ const bindF2: { f: (has: boolean) => void; keys: SettingPath[] }[] = [
             "图像编辑.arrow",
             "离线OCR",
             "OCR.类型",
-            "以图搜图.引擎",
             "鼠标快捷键",
         ],
     },
@@ -2691,7 +1762,6 @@ function getSettingMem() {
         "OCR.类型",
         "离线OCR",
         "翻译.翻译器",
-        "AI.在线模型",
         "快捷键.截屏搜索.key",
         "语言.语言",
     ];
@@ -3806,20 +2876,6 @@ function translatorD(
                 src: "https://learn.microsoft.com/zh-cn/azure/cognitive-services/translator/how-to-create-translator-resource#authentication-keys-and-endpoint-url",
             },
         },
-        llm: {
-            t: "大模型",
-            key: [
-                {
-                    name: "name",
-                    text: t("模型名称"),
-                    type: "select",
-                    list: getSet("AI.在线模型").map((i) => ({
-                        name: i.name,
-                        value: i.name,
-                    })),
-                },
-            ],
-        },
         chatgpt: {
             t: noI18n("ChatGPT"),
             key: [
@@ -3942,30 +2998,11 @@ function translatorD(
         testR.el.innerText = t("正在测试...");
         const v = getV();
         if (!v) return;
-        if (v.type === "llm") {
-            const model = getSet("AI.在线模型").find(
-                (i) => i.name === v.keys.name,
-            );
-            if (!model) {
-                testR.el.innerText = t("模型不存在");
-                return;
-            }
-            translator.e.chatgpt.setKeys({
-                url: new URL("chat/completions", model.url).toString(),
-                key: model.key,
-                config: {
-                    model: model.model,
-                },
-            });
-        } else {
-            // @ts-ignore
-            translator.e[v.type].setKeys(v.keys);
-        }
+        // @ts-ignore
+        translator.e[v.type].setKeys(v.keys);
         try {
-            const r =
-                await translator.e[
-                    v.type === "llm" ? "chatgpt" : v.type
-                ].test();
+            // @ts-ignore
+            const r = await translator.e[v.type].test();
             console.log(r);
             if (r) testR.el.innerText = t("测试成功");
         } catch (error) {
@@ -4269,86 +3306,6 @@ function hotkey() {
         .bindSet((v: string) => cvalue((v ?? "").split("+")))
         .bindGet(() => mainKey)
         .sv("");
-}
-
-function inpaintEl() {
-    const configPath = renderSendSync("userDataPath", []);
-    const dir = path.join(configPath, "models", "inpaint");
-    const file = path.join(dir, "migan_pipeline_v2.onnx");
-
-    const el = view("x", "wrap")
-        .class(Class.gap)
-        .style({ "align-items": "center" });
-
-    function render() {
-        const exists = fs.existsSync(file);
-        el.clear().add([
-            txt(exists ? t("已下载") : t("未下载")),
-            button(exists ? t("重新下载") : t("下载")).on("click", () => {
-                const pro = (() => {
-                    const mel = view().style({
-                        overflow: "hidden",
-                        width: baseWidth,
-                        height: "20px",
-                        borderRadius: "var(--border-radius)",
-                        backgroundColor: cssColor.bb,
-                    });
-                    const bel = view().style({
-                        width: "100%",
-                        height: "100%",
-                        backgroundColor: cssColor.main,
-                    });
-                    return mel.add(bel).bindSet((v: number) => {
-                        bel.style({
-                            width: `${Math.floor(v * 100)}%`,
-                        });
-                    });
-                })();
-                el.clear().add(pro);
-                const url = githubUrl(
-                    "xushengfeng/eSearch/releases/download/13.1.6/migan_pipeline_v2.onnx",
-                    "base",
-                );
-                fetch(url).then(async (res) => {
-                    if (!res.ok) {
-                        throw new Error(
-                            `下载失败: ${res.status} ${res.statusText}`,
-                        );
-                    }
-                    if (!res.body) {
-                        throw new Error("响应体中无数据");
-                    }
-                    const contentLength = res.headers.get("content-length");
-                    const totalBytes = contentLength
-                        ? Number.parseInt(contentLength)
-                        : undefined;
-                    const reader = res.body.getReader();
-                    let downloadedBytes = 0;
-                    const chunks = [];
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        chunks.push(value);
-                        downloadedBytes += value.length;
-                        if (totalBytes) pro.sv(downloadedBytes / totalBytes);
-                    }
-                    const b = Buffer.from(await new Blob(chunks).arrayBuffer());
-                    fs.mkdirSync(dir, { recursive: true });
-                    fs.writeFileSync(file, b);
-                    render();
-                });
-            }),
-            exists
-                ? button(t("删除")).on("click", () => {
-                      fs.rmSync(dir, { recursive: true, force: true });
-                      render();
-                  })
-                : null,
-        ]);
-    }
-    render();
-
-    return view().class(blockSetting).add(el);
 }
 
 function ocrEl() {
