@@ -47,76 +47,129 @@ async function runDiagnostic() {
         logStage("STAGE_DISPLAY_DETECTION", false, e.message);
     }
 
-    // 3. 原生截图能力与 Fallback 测试
-    let nativeCaptureSuccess = false;
-    let fallbackSuccess = false;
+    // 3. 真实原生屏幕像素捕获与图像真实性检验 (禁止任何 Fake / Fallback Canvas 伪造 PASS)
+    let realCaptureSuccess = false;
     let capturedWidth = 0;
     let capturedHeight = 0;
+    let savedFilePath = "";
+    let testFileSize = 0;
+    let uniqueColorsCount = 0;
+    let nonTransparentRatio = 0;
+    let centerPixelStr = "";
+    let cornerPixelsStr = "";
+    let captureStageMessage = "";
 
-    // 3.1 node-screenshots 测试
-    try {
-        const Screenshots = require('node-screenshots');
-        const monitors = Screenshots.Monitor.all();
-        console.log(`- node-screenshots found ${monitors.length} monitor(s)`);
-        if (monitors.length > 0) {
-            const m0 = monitors[0];
-            try {
-                const img = await m0.captureImage();
-                capturedWidth = img.width;
-                capturedHeight = img.height;
-                if (capturedWidth > 0 && capturedHeight > 0) {
-                    nativeCaptureSuccess = true;
-                    console.log(`  node-screenshots capture SUCCESS: ${capturedWidth}x${capturedHeight}`);
-                }
-            } catch (err) {
-                console.log(`  node-screenshots capture notice: ${err.message}`);
+    const diagDir = path.join(__dirname, '../temp/diagnostics');
+    const fs = require('node:fs');
+    fs.mkdirSync(diagDir, { recursive: true });
+    const targetPng = path.join(diagDir, 'screenshot-test.png');
+    const rawScreenPng = path.join(diagDir, 'raw-screen.png');
+
+    // 3.1 优先测试 Windows 原生截屏器 (Fresh Thread GDI)
+    const nativeExe = path.join(__dirname, '../resources/bin/wincapture.exe');
+    if (process.platform === 'win32' && fs.existsSync(nativeExe)) {
+        try {
+            console.log(`- Running Windows Native Capture Engine: ${nativeExe}`);
+            const { execFileSync } = require('node:child_process');
+            execFileSync(nativeExe, [targetPng]);
+            if (fs.existsSync(targetPng)) {
+                const stat = fs.statSync(targetPng);
+                testFileSize = stat.size;
+                savedFilePath = targetPng;
+                fs.copyFileSync(targetPng, rawScreenPng);
+                console.log(`  wincapture generated image files: ${targetPng} & ${rawScreenPng} (${testFileSize} bytes)`);
             }
+        } catch (err) {
+            console.log(`  wincapture execution error: ${err.message}`);
         }
-    } catch (e) {
-        console.log(`  node-screenshots module notice: ${e.message}`);
     }
 
-    // 3.2 desktopCapturer 备选测试
-    if (!nativeCaptureSuccess) {
+    // 3.2 备选测试 node-screenshots (若原生引擎未执行)
+    if (!fs.existsSync(targetPng) || testFileSize === 0) {
         try {
-            console.log("- Testing fallback desktopCapturer...");
-            const primary = screen.getPrimaryDisplay();
-            const targetWidth = Math.round(primary.bounds.width * primary.scaleFactor);
-            const targetHeight = Math.round(primary.bounds.height * primary.scaleFactor);
-            const sources = await desktopCapturer.getSources({
-                types: ['screen'],
-                thumbnailSize: {
-                    width: targetWidth,
-                    height: targetHeight
+            const Screenshots = require('node-screenshots');
+            const monitors = Screenshots.Monitor.all();
+            if (monitors.length > 0) {
+                const img = await monitors[0].captureImage();
+                if (img && img.width > 0 && img.height > 0) {
+                    fs.writeFileSync(targetPng, img.toPngSync(true));
+                    testFileSize = fs.statSync(targetPng).size;
+                    savedFilePath = targetPng;
+                    console.log(`  node-screenshots captured: ${img.width}x${img.height} (${testFileSize} bytes)`);
                 }
-            });
-            if (sources.length > 0 && !sources[0].thumbnail.isEmpty()) {
-                const size = sources[0].thumbnail.getSize();
-                capturedWidth = size.width;
-                capturedHeight = size.height;
-                nativeCaptureSuccess = true;
-                console.log(`  desktopCapturer capture SUCCESS: ${capturedWidth}x${capturedHeight}`);
             }
         } catch (e) {
-            console.log(`  desktopCapturer notice: ${e.message}`);
+            console.log(`  node-screenshots capture error: ${e.message}`);
         }
     }
 
-    // 3.3 保底 Fallback 验证
-    if (!nativeCaptureSuccess) {
-        const primary = screen.getPrimaryDisplay();
-        const fbW = Math.round(primary.bounds.width * primary.scaleFactor);
-        const fbH = Math.round(primary.bounds.height * primary.scaleFactor);
-        if (fbW > 0 && fbH > 0) {
-            fallbackSuccess = true;
-            capturedWidth = fbW;
-            capturedHeight = fbH;
-            console.log(`  Safe transparent fallback canvas verified: ${fbW}x${fbH}`);
+    // 3.3 深度真实性像素检验 (Pixel Authenticity Verification)
+    if (fs.existsSync(targetPng) && testFileSize > 10 * 1024) {
+        try {
+            const { nativeImage } = require('electron');
+            const nImg = nativeImage.createFromPath(targetPng);
+            const size = nImg.getSize();
+            capturedWidth = size.width;
+            capturedHeight = size.height;
+            const bitmap = nImg.toBitmap();
+
+            if (bitmap.length >= capturedWidth * capturedHeight * 4) {
+                const colorSet = new Set();
+                let nonTransparentCount = 0;
+                let sampleTotal = 0;
+
+                const stepX = Math.max(1, Math.floor(capturedWidth / 40));
+                const stepY = Math.max(1, Math.floor(capturedHeight / 25));
+
+                for (let y = 0; y < capturedHeight; y += stepY) {
+                    for (let x = 0; x < capturedWidth; x += stepX) {
+                        const idx = (y * capturedWidth + x) * 4;
+                        const b = bitmap[idx];
+                        const g = bitmap[idx + 1];
+                        const r = bitmap[idx + 2];
+                        const a = bitmap[idx + 3];
+                        sampleTotal++;
+                        if (a > 0) nonTransparentCount++;
+                        colorSet.add((r << 16) | (g << 8) | b);
+                    }
+                }
+
+                uniqueColorsCount = colorSet.size;
+                nonTransparentRatio = Math.round((nonTransparentCount / sampleTotal) * 100);
+
+                // 采样中心与四角像素
+                const getPixelAt = (x, y) => {
+                    const i = (y * capturedWidth + x) * 4;
+                    return `RGBA(${bitmap[i+2]},${bitmap[i+1]},${bitmap[i]},${bitmap[i+3]})`;
+                };
+                centerPixelStr = getPixelAt(Math.floor(capturedWidth / 2), Math.floor(capturedHeight / 2));
+                cornerPixelsStr = `TL=${getPixelAt(0, 0)}, TR=${getPixelAt(capturedWidth - 1, 0)}, BL=${getPixelAt(0, capturedHeight - 1)}, BR=${getPixelAt(capturedWidth - 1, capturedHeight - 1)}`;
+
+                console.log(`- Image Authenticity Metrics:`);
+                console.log(`  Resolution: ${capturedWidth}x${capturedHeight}`);
+                console.log(`  File Size: ${testFileSize} bytes`);
+                console.log(`  Sampled Points: ${sampleTotal}`);
+                console.log(`  Unique Colors in Sample: ${uniqueColorsCount}`);
+                console.log(`  Non-transparent Ratio: ${nonTransparentRatio}%`);
+                console.log(`  Center Pixel: ${centerPixelStr}`);
+                console.log(`  Corner Pixels: ${cornerPixelsStr}`);
+
+                // 必须满足：有尺寸、文件够大、完全不透明、样本包含多样真实颜色（非纯色占位）
+                if (capturedWidth > 0 && capturedHeight > 0 && testFileSize > 20000 && nonTransparentRatio === 100 && uniqueColorsCount >= 30) {
+                    realCaptureSuccess = true;
+                    captureStageMessage = `Real Desktop Captured: ${capturedWidth}x${capturedHeight}, ${testFileSize} bytes, ${uniqueColorsCount} colors, 100% opaque`;
+                } else {
+                    captureStageMessage = `Invalid Pixel Data: colors=${uniqueColorsCount}, opaque=${nonTransparentRatio}%, size=${testFileSize}`;
+                }
+            }
+        } catch (parseErr) {
+            captureStageMessage = `Failed to parse captured image: ${parseErr.message}`;
         }
+    } else {
+        captureStageMessage = `Capture failed: output file missing or too small (${testFileSize} bytes)`;
     }
 
-    const captureStageOk = nativeCaptureSuccess || fallbackSuccess;
-    logStage("STAGE_NATIVE_CAPTURE", captureStageOk, `Capture result: ${capturedWidth}x${capturedHeight} (${nativeCaptureSuccess ? 'Native' : 'Fallback Canvas'})`);
+    logStage("STAGE_NATIVE_CAPTURE", realCaptureSuccess, captureStageMessage);
 
     // 4. 全局快捷键注册验证
     const shortcuts = [

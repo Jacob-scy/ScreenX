@@ -1,5 +1,8 @@
 const { ipcRenderer, nativeImage, shell, dialog, desktopCapturer } =
     require("electron") as typeof import("electron");
+import child_process from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import type { MessageBoxSyncOptions, NativeImage } from "electron";
 import { renderSendSync } from "../../../lib/ipc";
 import { tryxAwait } from "../../../lib/utils";
@@ -267,12 +270,118 @@ async function dispaly2screen(
 
     // 使用displays作为参考，优化匹配方式
 
-    async function safeCaptureFromMonitor(
-        matchedScreen: import("node-screenshots").Monitor,
+    function getWinCapturePath(): string | null {
+        if (process.platform !== "win32") return null;
+        const proc = process as unknown as { resourcesPath?: string };
+        const candidates = [
+            path.join(process.cwd(), "resources", "bin", "wincapture.exe"),
+            path.join(
+                __dirname,
+                "..",
+                "..",
+                "resources",
+                "bin",
+                "wincapture.exe",
+            ),
+            path.join(
+                __dirname,
+                "..",
+                "..",
+                "..",
+                "resources",
+                "bin",
+                "wincapture.exe",
+            ),
+            proc.resourcesPath
+                ? path.join(proc.resourcesPath, "bin", "wincapture.exe")
+                : null,
+            proc.resourcesPath
+                ? path.join(
+                      proc.resourcesPath,
+                      "resources",
+                      "bin",
+                      "wincapture.exe",
+                  )
+                : null,
+        ].filter(Boolean) as string[];
+
+        for (const p of candidates) {
+            if (fs.existsSync(p)) return p;
+        }
+        return null;
+    }
+
+    async function captureNativeWindows(
         display?:
             | Electron.Display
             | {
-                  bounds: { width: number; height: number };
+                  bounds: {
+                      x?: number;
+                      y?: number;
+                      width: number;
+                      height: number;
+                  };
+                  scaleFactor?: number;
+                  id?: number;
+              },
+    ): Promise<{
+        toImageData: () => ImageData;
+        toNativeImage: () => Electron.NativeImage;
+    } | null> {
+        const exe = getWinCapturePath();
+        if (!exe) return null;
+
+        return new Promise((resolve) => {
+            let args: string[] = [];
+            if (display?.bounds) {
+                const sf = display.scaleFactor || 1;
+                const x = Math.round((display.bounds.x || 0) * sf);
+                const y = Math.round((display.bounds.y || 0) * sf);
+                const w = Math.round(display.bounds.width * sf);
+                const h = Math.round(display.bounds.height * sf);
+                args = [String(x), String(y), String(w), String(h), "-"];
+            }
+
+            child_process.execFile(
+                exe,
+                args,
+                { encoding: "buffer", maxBuffer: 50 * 1024 * 1024 },
+                (err, stdout) => {
+                    if (err || !stdout || stdout.length === 0) {
+                        console.warn("wincapture error:", err);
+                        resolve(null);
+                        return;
+                    }
+                    try {
+                        const img = nativeImage.createFromBuffer(stdout);
+                        if (img && !img.isEmpty()) {
+                            const data = nImage2Imagedata(img);
+                            resolve({
+                                toImageData: () => data.data,
+                                toNativeImage: () => img,
+                            });
+                            return;
+                        }
+                    } catch (ex) {
+                        console.warn("parse wincapture stdout failed:", ex);
+                    }
+                    resolve(null);
+                },
+            );
+        });
+    }
+
+    async function safeCaptureFromMonitor(
+        matchedScreen?: import("node-screenshots").Monitor,
+        display?:
+            | Electron.Display
+            | {
+                  bounds: {
+                      width: number;
+                      height: number;
+                      x?: number;
+                      y?: number;
+                  };
                   scaleFactor: number;
                   id?: number;
               },
@@ -280,31 +389,55 @@ async function dispaly2screen(
         toImageData: () => ImageData;
         toNativeImage: () => Electron.NativeImage;
     }> {
-        try {
-            const data = await matchedScreen.captureImage();
-            if (data && data.width > 0 && data.height > 0) {
-                return {
-                    toImageData: () =>
-                        toCanvas2(
-                            data.toRawSync(true),
-                            data.width,
-                            data.height,
-                        ),
-                    toNativeImage: () => {
-                        return nativeImage.createFromBuffer(
-                            data.toPngSync(true),
-                        );
-                    },
-                };
+        // 1. Windows 环境下优先使用原生高分辨率 wincapture 引擎
+        if (process.platform === "win32") {
+            try {
+                const nativeResult = await captureNativeWindows(display);
+                if (nativeResult) {
+                    console.log(
+                        "[SCREENSHOT_BACKEND: WIN_NATIVE] Real physical desktop capture SUCCESS",
+                    );
+                    return nativeResult;
+                }
+            } catch (e) {
+                console.warn(
+                    "captureNativeWindows failed, trying fallback:",
+                    e,
+                );
             }
-        } catch (e) {
-            console.warn(
-                "node-screenshots capture failed, trying desktopCapturer fallback:",
-                e,
-            );
         }
 
-        // Fallback: desktopCapturer
+        // 2. 备选：node-screenshots
+        if (matchedScreen) {
+            try {
+                const data = await matchedScreen.captureImage();
+                if (data && data.width > 0 && data.height > 0) {
+                    console.log(
+                        "[SCREENSHOT_BACKEND: NODE_SCREENSHOTS] Real capture SUCCESS",
+                    );
+                    return {
+                        toImageData: () =>
+                            toCanvas2(
+                                data.toRawSync(true),
+                                data.width,
+                                data.height,
+                            ),
+                        toNativeImage: () => {
+                            return nativeImage.createFromBuffer(
+                                data.toPngSync(true),
+                            );
+                        },
+                    };
+                }
+            } catch (e) {
+                console.warn(
+                    "node-screenshots capture failed, trying desktopCapturer fallback:",
+                    e,
+                );
+            }
+        }
+
+        // 3. 备选：desktopCapturer
         if (display && desktopCapturer) {
             try {
                 const targetW = Math.round(
@@ -325,6 +458,9 @@ async function dispaly2screen(
                                 String(s.display_id) === String(display.id),
                         ) || sources[0];
                     if (matchedSource && !matchedSource.thumbnail.isEmpty()) {
+                        console.log(
+                            "[SCREENSHOT_BACKEND: DESKTOP_CAPTURER] Real capture SUCCESS",
+                        );
                         const nImg = matchedSource.thumbnail;
                         return {
                             toImageData: () => nImage2Imagedata(nImg).data,
@@ -333,10 +469,13 @@ async function dispaly2screen(
                     }
                 }
             } catch (err) {
-                console.warn("desktopCapturer fallback also failed:", err);
+                console.warn("desktopCapturer fallback failed:", err);
             }
         }
 
+        console.error(
+            "[SCREENSHOT_CAPTURE_FAILED] All backends failed to capture desktop pixels",
+        );
         return {
             toImageData: () => emptyImageData(),
             toNativeImage: () => nativeImage.createEmpty(),
@@ -344,16 +483,32 @@ async function dispaly2screen(
     }
 
     if (screens.length === 0) {
-        allScreens.push({
-            bounds: { x: 0, y: 0, width: 0, height: 0 },
-            size: { width: 0, height: 0 },
-            scaleFactor: 1,
-            id: -1,
-            capture: async () => ({
-                toImageData: () => emptyImageData(),
-                toNativeImage: () => nativeImage.createEmpty(),
-            }),
-        });
+        if (displays && displays.length > 0) {
+            for (const display of displays) {
+                const x: ReturnData = {
+                    bounds: display.bounds,
+                    size: {
+                        width: display.bounds.width,
+                        height: display.bounds.height,
+                    },
+                    scaleFactor: display.scaleFactor,
+                    id: display.id,
+                    capture: () => safeCaptureFromMonitor(undefined, display),
+                };
+                allScreens.push(x);
+            }
+        } else {
+            allScreens.push({
+                bounds: { x: 0, y: 0, width: 0, height: 0 },
+                size: { width: 0, height: 0 },
+                scaleFactor: 1,
+                id: -1,
+                capture: async () => ({
+                    toImageData: () => emptyImageData(),
+                    toNativeImage: () => nativeImage.createEmpty(),
+                }),
+            });
+        }
     } else if (
         (displays?.length ?? 0) > 0 &&
         displays?.length === screens.length

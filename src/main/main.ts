@@ -1045,6 +1045,15 @@ function createClipWindow() {
 
     if (dev) _clipWindow.webContents.openDevTools();
 
+    _clipWindow.webContents.on(
+        "did-fail-load",
+        (_e, errorCode, errorDescription, validatedURL) => {
+            console.error(
+                `[CREATE_CLIP_WINDOW] did-fail-load: code=${errorCode}, desc=${errorDescription}, url=${validatedURL}`,
+            );
+        },
+    );
+
     _clipWindow.webContents.on("render-process-gone", (_e, d) => {
         console.log(d);
         const id = dialog.showMessageBoxSync({
@@ -1059,6 +1068,7 @@ function createClipWindow() {
     });
     _clipWindow.webContents.once("did-finish-load", () => {
         clipWindowLoaded = true;
+        console.log("[CREATE_CLIP_WINDOW] did-finish-load SUCCESS");
     });
     _clipWindow.webContents.on("console-message", (d) => {
         if (d.level !== "debug")
@@ -1073,6 +1083,9 @@ function createClipWindow() {
 }
 
 mainOn("clip_show", () => {
+    console.log(
+        "[MAIN] Received clip_show message from renderer, executing fullScreen()",
+    );
     fullScreen();
 });
 mainOn("clip_close", () => {
@@ -1118,9 +1131,15 @@ mainOn("getMousePos", (_, e) => {
     };
 });
 mainOn("trigger_screenshot", () => {
+    console.log(
+        "[BUTTON_SCREENSHOT_CLICK] trigger_screenshot IPC received in main process",
+    );
     startScreenshot();
 });
 mainOn("trigger_long_screenshot", () => {
+    console.log(
+        "[BUTTON_SCREENSHOT_CLICK] trigger_long_screenshot IPC received in main process",
+    );
     startLongScreenshot();
 });
 
@@ -1130,7 +1149,7 @@ mainOn("trigger_long_screenshot", () => {
 function startScreenshot(imgPath?: string) {
     const timestamp = new Date().toISOString();
     console.log(
-        `[${timestamp}][MAIN] SCREENSHOT_REQUEST: type=normal, customPath=${!!imgPath}`,
+        `[${timestamp}][MAIN][START_SCREENSHOT] normal capture triggered, customPath=${!!imgPath}`,
     );
     if (imgPath) {
         readFile(imgPath, (err, data) => {
@@ -1148,7 +1167,9 @@ function startScreenshot(imgPath?: string) {
 
 function startLongScreenshot() {
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}][MAIN] SCREENSHOT_REQUEST: type=long`);
+    console.log(
+        `[${timestamp}][MAIN][START_SCREENSHOT] long capture triggered`,
+    );
     sendCaptureEvent(undefined, "long");
 }
 
@@ -1196,6 +1217,16 @@ async function sendCaptureEvent(data?: Buffer, type?: 功能) {
         screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).id,
         type,
     ]);
+
+    // 超时保底展示（避免渲染进程某些情况未发送 clip_show 导致窗口永远隐藏）
+    setTimeout(() => {
+        if (win && !win.isDestroyed() && !win.isVisible()) {
+            console.log(
+                "[SCREENSHOT_FALLBACK_SHOW] clip_show event timeout, forcing fullScreen()",
+            );
+            fullScreen();
+        }
+    }, 1500);
 }
 
 /** 关闭或隐藏截屏 */
