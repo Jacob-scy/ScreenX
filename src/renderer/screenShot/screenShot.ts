@@ -42,7 +42,7 @@ function getCenterDistance(
 }
 
 let _command: string | undefined;
-let commandSavePath = "/dev/shm/esearch-img.png";
+let commandSavePath = "/dev/shm/screenx-img.png";
 let _useXDGDesktopProtal = false;
 
 function init(
@@ -167,19 +167,15 @@ async function dispaly2screen(
         const image = data.image;
         const s = image.getSize();
         const primary = displays?.[0];
-        const sf = primary?.scaleFactor || window.devicePixelRatio || 1;
-        const b = primary?.bounds || {
-            x: 0,
-            y: 0,
-            width: Math.round(s.width / sf),
-            height: Math.round(s.height / sf),
-        };
+        // 传入图片（如贴图编辑）时：按图片实际像素建立画布、1:1 编辑，
+        // 而不是按主屏尺寸（否则小图会被塞进全屏画布导致“编辑不可用”）。
+        const size = { width: s.width, height: s.height };
         return {
             screen: [
                 {
-                    bounds: b,
-                    size: { width: b.width, height: b.height },
-                    scaleFactor: sf,
+                    bounds: { x: 0, y: 0, ...size },
+                    size,
+                    scaleFactor: 1,
                     id: primary?.id ?? 0,
                     capture: async () => ({
                         toImageData: () => data.data,
@@ -188,7 +184,7 @@ async function dispaly2screen(
                 },
             ],
             window: [],
-            type: "normal",
+            type: "img",
         };
     }
 

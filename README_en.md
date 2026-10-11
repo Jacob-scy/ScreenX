@@ -1,271 +1,125 @@
-# eSearch
+# ScreenX
+
+Lightweight, modern, and practical desktop screenshot & productivity tool for Windows.
+
+> **Screenshot · Offline OCR · Search · Translation · Pin · Omnidirectional Scrolling Screenshot**
 
 ( [中文](README.md) | English )
 
-![LOGO](https://raw.githubusercontent.com/xushengfeng/eSearch-website/master/public/readme/title_photo.svg)
-[![license](https://img.shields.io/github/license/xushengfeng/eSearch)](LICENSE)
-![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
-![commit-activity](https://img.shields.io/github/commit-activity/m/xushengfeng/eSearch)
-[![release-date](https://img.shields.io/github/release-date/xushengfeng/eSearch)](https://github.com/xushengfeng/eSearch/releases/latest)
-[![release](https://img.shields.io/github/v/release/xushengfeng/eSearch)](https://github.com/xushengfeng/eSearch/releases/latest)
-[![](https://img.shields.io/github/downloads/xushengfeng/eSearch/total?color=brightgreen&label=Total%20downloads)](https://github.com/xushengfeng/eSearch/releases/latest)
-[![aur](https://img.shields.io/badge/aur-e--search-blue?logo=archlinux)](https://aur.archlinux.org/packages/e-search)
-[![aur1](https://img.shields.io/badge/aur-e--search--git-blue?logo=archlinux)](https://aur.archlinux.org/packages/e-search-git)
+---
 
-[![QQ Group](https://img.shields.io/badge/QQ群-1057170038-blue.svg?&color=12b7f5&logo=qq)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=1qoIvXZ5RAICkw_1DchHAaUdnck-wZwJ&authKey=tbBmRbmLJFIJi3dNbMROFpU%2B89V0J572DKUylwacd1%2FgCSg52Ql8Lu5RYGSZQkhc&noverify=0&group_code=1057170038)
+## Overview
 
-## Introduction
+ScreenX is focused on a streamlined, stable, and swift daily screen information extraction workflow:
+**"Select Screen Area → Local Offline OCR → Quick Search / Word Translation / Desktop Pin"**
 
-eSearch is a :electron: rewrite of [Information-portal](https://github.com/xushengfeng/Information-portal.git) with many additional features.
+Through deliberate architectural streamlining and system-level hardening, ScreenX eliminates redundant modules to focus purely on desktop productivity. It runs standalone with an embedded runtime, requiring no external Node.js or .NET runtime configuration.
 
-The main purpose is to implement a **screen search** function similar to [Smartisan Big Bang](https://www.smartisan.com/pr/videos/bigbang-introduction) or [Xiaomi Portal](https://www.miui.com/zt/miui9/index.html) on Linux (also available on Windows and macOS), and it is also a convenient **screenshot software**.
+---
 
-After several iterations, eSearch's functionality has become more and more enriched.
+## Key Features
 
-Including **screenshot+OCR+search+translation+pasting+reverse image search+screen recording**.
+### 1. Native Capture & Annotation
+- **Physical Buffer Capture**: Based on Win32 GDI physical buffer capture technology, providing accurate selection across multi-monitor and high-DPI environments without screen tearing or black screens.
+- **Rich Annotation Tools**: Brush, rectangle, ellipse, arrow, text, mosaic, Gaussian blur, and screen color picker.
+- **History & Undo**: Full undo/redo support for seamless editing.
+- **Save & Share**: One-click copy to clipboard, or export to PNG, JPG, or SVG image files.
 
-![Screenshot interface](https://raw.githubusercontent.com/xushengfeng/eSearch-website/master/public/readme/1.webp)
+### 2. Offline Local OCR
+- **On-Device Neural Inference**: Powered by embedded lightweight PaddleOCR ONNX models running entirely locally on CPU, ensuring user privacy and data security even offline.
+- **Smart Text Handling**: Immediate text editing, paragraph merging, and one-click quick extraction.
 
-> The font used is [FiraCode](https://github.com/tonsky/FiraCode), and the font can be set in the settings.
+### 3. Integrated Instant Search
+- **Select & Search**: Instantly invoke the default browser with popular search engines directly from cropped selections or recognized text.
 
-![Text recognition main page](https://raw.githubusercontent.com/xushengfeng/eSearch-website/master/public/readme/8.webp)
+### 4. Quick Word Translation
+- **Side-by-Side Comparison**: Translate selected text seamlessly with configurable multiple translation engines for bilingual lookup and document reading.
 
-## Download and Installation
+### 5. Desktop Pin
+- **Top-Level Screen Pinning**: Pin captured snippets or clipboard images on top of all windows with a single keystroke.
+- **Fluid Interactions**: Infinite zoom, opacity adjustments, click-through (mouse transparency), and free drag positioning.
 
-Download from the website [eSearch](https://esearch-app.netlify.app/#download)
+### 6. Omnidirectional Scrolling Screenshot
+- **Multi-Directional Stitching**: Capture long web pages, wide spreadsheets, and long documents vertically, horizontally, or in any scroll direction.
+- **Feature Alignment**: Automatically detects overlapping regions for seamless image stitching.
 
-or open the [releases](https://github.com/xushengfeng/eSearch/releases) tab on the right, select the package that suits your system, and download and install it.
+---
 
-For users in China, you can use [GitHub Proxy](https://ghfast.top/) to accelerate the download.
+## Global Shortcuts
 
-For ArchLinux, you can search and install `e-search` or `e-search-git` from the AUR.
+| Action | Default Shortcut | Description |
+| :--- | :--- | :--- |
+| **Capture / Annotate** | <kbd>Alt</kbd> + <kbd>C</kbd> | Crop screen area and open annotation toolbar |
+| **OCR Workbench** | <kbd>Alt</kbd> + <kbd>V</kbd> | Open character recognition workbench |
+| **Clipboard Pin** | <kbd>Alt</kbd> + <kbd>B</kbd> | Pin image from clipboard to desktop |
+| **Scrolling Screenshot** | <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd> | Capture long content with automated alignment |
 
-Using winget: `winget install esearch`
+*(All shortcuts can be customized via Settings in the system tray menu)*
 
-There is no Homebrew package available at the moment, and we welcome volunteer maintainers to provide support.
+---
 
-## Launch
+## Download & Installation
 
-Open eSearch from your launcher, and it will appear in the system tray.
+### 1. Official Installer (Setup)
+- **Recommended for general Windows users**.
+- Download `ScreenX-Setup-1.0.0.exe`, launch the installer, and follow the wizard.
+- Creates Desktop and Start Menu shortcuts, and supports standard Windows uninstallation.
 
-The default shortcut key is <kbd>Alt</kbd>+<kbd>C</kbd> (you can also set the shortcut key in the settings).
+### 2. Portable Edition (ZIP)
+- **Zero-installation, suitable for USB flash drives and portable environments**.
+- Download `ScreenX-1.0.0-win.zip` and extract to any local folder.
+- Run `ScreenX.exe` directly. Self-contained runtime data isolation; simply delete the directory to remove.
 
-## Features
+---
 
-For more introduction, see [Documentation](./docs/use/start.md)
+## Public Endpoints & Distribution
 
-### Screenshot
+- **Official Website**: [https://screenx.jacobscy.xyz/](https://screenx.jacobscy.xyz/)
+- **Releases & Checksums**: [https://screenx.jacobscy.xyz/release](https://screenx.jacobscy.xyz/release)
+- **Privacy Policy**: [https://screenx.jacobscy.xyz/privacy](https://screenx.jacobscy.xyz/privacy)
+- **Download CDN**: [https://download.jacobscy.xyz/](https://download.jacobscy.xyz/)
+- **Personal Navigation**: [https://nav.jacobscy.xyz/](https://nav.jacobscy.xyz/)
+- **Latest Metadata API**: [https://download.jacobscy.xyz/latest.json](https://download.jacobscy.xyz/latest.json)
 
-Select and crop, color picker, freehand brush, geometry, mosaic, blur
+---
 
-In addition to adjusting with arrow keys, selection also supports inputting arithmetic expressions for adjustment
+## Development & Build
 
-Supports executing operations immediately after custom selection, such as automatically performing OCR after selection
+### Requirements
+- Node.js >= 18
+- pnpm >= 9
+- Windows 10 (1809+) / Windows 11 (64-bit)
 
-Also supports scrolling screenshots, can stitch together horizontally, vertically, or in any direction
+### Commands
 
-### Screenshot Beautification
+```powershell
+# 1. Install dependencies
+pnpm install
 
-You can set backgrounds (gradient, image), rounded corners, shadows for screenshots.
+# 2. Local dev mode
+pnpm run dev
 
-Change image resolution for export.
+# 3. Lint & Typecheck
+pnpm run lint
+pnpm run typecheck
 
-Erase objects and repair images.
+# 4. Run tests
+pnpm run test
 
-### Screen Recording
-
-Record screen, custom size, camera
-
-Can indicate cursor position and keyboard keystrokes
-
-Can set a virtual background
-
-### Super Screen Recording
-
-Automatically zoom and focus to the mouse position for more vivid screen recording
-
-Accelerate, delete, operate every frame
-
-### Screen Overlay
-
-Scroll zooming, opacity, auto repositioning, mouse transparency
-
-Supports magnifying images without changing window size to prevent obscuring other content
-
-Can set filters and transformations (such as mirroring) through CSS
-
-### OCR (Optical Character Recognition)
-
-Out-of-the-box offline OCR ([eSearch-OCR](https://github.com/xushengfeng/eSearch-OCR), based on [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)), simply select the text and press the Enter key.
-
-Large character set, supports rare characters and special symbols (requires downloading the v5 model in settings).
-
-Offline OCR supports paragraph recognition, and can also use a segmentation algorithm based on punctuation.
-
-Supports vertical text and image rotation recognition.
-
-Also supports online OCR from Baidu and Youdao.
-
-Editable text after recognition, select text on the image, and sync the selection to the editing area for easy proofreading.
-
-Supports multiple languages: Chinese, English, Korean, Japanese, Telugu, Kannada, Tamil, Latin, Arabic letters, Slavic letters, and Sanskrit letters (requires additional downloads in settings).
-
-### Image Search
-
-Image search engines from Google, Baidu, and Yandex
-
-Can customize multi-modal large model interfaces to interact with AI using images
-
-### Translation
-
-Can call translation after OCR, supports word selection translation
-
-Supports free translation engines like Google Translate, and can also set APIs for other translation engines such as DeepL and Baidu, can use AI translations like ChatGPT, and even customize local AI translations
-
-Can translate with multiple engines simultaneously, choosing the best
-
-Can save translation results to local files or online to memory software like Anki
-
-### Screen Translation
-
-Generates an overlay window and replaces image text with translated text
-
-Can set timed translation, suitable for videos, games, etc.
-
-### Others
-
-QR code recognition
-
-## Show
-
-https://user-images.githubusercontent.com/28475549/155870834-34ffa59f-9eac-4eea-9d82-135681d7dfa9.mp4
-
-> Screenshot, freely adjust the selection box size (video about 2.6MB)
-
-https://user-images.githubusercontent.com/28475549/155870857-99c7d6d0-a90b-4558-872a-85f2603225d6.mp4
-
-> Color picker (video about 1MB)
-
-https://user-images.githubusercontent.com/28475549/155870867-fb0d31f0-2e06-431c-9ae9-ee3af5a5c08e.mp4
-
-> Ding on the screen, opacity adjustment, reset, and mouse operation (video about 1.8MB)
-
-![3](https://raw.githubusercontent.com/xushengfeng/eSearch-website/master/public/readme/3.webp)
-
-> Drawing interface
-
-https://user-images.githubusercontent.com/28475549/155870881-9b2fc1b3-77de-4a99-8076-ed49b7b5c4c0.mp4
-
-> Main page search and editing in other applications (video about 1.6MB)
-
-![3](https://raw.githubusercontent.com/xushengfeng/eSearch-website/master/public/readme/4.webp)
-
-> Main page find and replace (supports regular expression)
-
-## Internationalization
-
-Most buttons use icons, reducing unnecessary translation.
-
-[+Add new language](./lib/translate/readme.md)
-
-- [x] Simplified Chinese
-- [x] Traditional Chinese
-- [x] Esperanto（Esperanto）
-- [x] Spanish（Español）
-- [x] Arabic（عربي）
-- [x] English
-- [x] French（Français）
-- [x] Russian（Русский）
-
-## Running & Compiling from Source Code
-
-```shell
-git clone https://github.com/xushengfeng/eSearch.git
-cd eSearch
-npm install
-# Compile
-npm run dist
-# The install package and unpacked directory will be created in the build directory
+# 5. Production build
+pnpm run build
+pnpm run dist
 ```
 
-```shell
-# Run
-npm run start
-# Debug
-npm run dev
-```
+---
 
-[Specific technical instructions](docs/develop/readme.md)
+## License & Attribution
 
-## Testing
+ScreenX is Free and Open Source Software (FOSS) licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
 
-Tested successfully on ArchLinux, KDE plasma, Xorg.
+This project is a modified work evolved from the open-source upstream project **eSearch**:
+- **Original Project**: [https://github.com/xushengfeng/eSearch](https://github.com/xushengfeng/eSearch)
+- **Original Copyright**: Copyright © xushengfeng
+- **License**: GNU General Public License v3.0 (GPL-3.0)
 
-Tested successfully on Windows 10 and Windows 11.
-
-Tested successfully on macOS Catalina.
-
-## Q&A
-
-### Win7 and Win8 are no longer supported
-
-Electron officially no longer supports Win7 and Win8, so eSearch no longer supports it either.
-
-But you can compile it yourself, see [Documentation](./docs/use/qa.md#兼容性), some features may not be available.
-
-### Download the dependency library
-
-Most Windows will prompt you to download the dependent library after installation. This is because the screenshot library is needed. Clicking Download will automatically open Microsoft's official website for download. It may need to be restarted after installation is complete.
-
-### No response when clicking on Gnome
-
-Gnome users need to install the [appindicator](https://extensions.gnome.org/extension/615/appindicator-support/) plugin to use the system tray.
-
-### mac alert file is corrupt
-
-Mac has put some restrictions on dmg downloads from the Internet.
-
-You can search for keywords such as "mac" and "file corruption" on the Internet. Different versions of the system apply different methods.
-
-### Why choose electron
-
-- The need for cross-platform support. I wanted to experience the excellent screenshot tools on Windows on Linux, and it's not good for Linux to be left out, so I chose cross-platform support.
-- Qt relies on c++, and the learning cost is too high. Flutter for desktop is not yet mature. I am more proficient in js development.
-- Screenshot relies on the local system, which is something current browsers cannot do.
-- Ultimately, there is only one cross-platform solution similar to JavaScript. I chose the more mature and widely used electron.
-
-In the case that other platforms do not have a separate package as a library like Arch Linux, the software occupies a lot of storage space, but the increase in dozens of js scripts is not much, but the functions brought are significantly felt, so I will try my best to give full play to its potential to achieve a more beautiful UI and richer features.
-
-### Why is the installation package so big
-
-In addition to the use of Electron, there are also onnx runtime libraries (used to run AI models), offline Optical Character Recognition models, screen recording portrait recognition models, object removal models for advanced editing, FFmpeg (used for screen recording format conversion, Linux has libraries so it is not included), etc.
-
-### After updating, new errors appear that didn't exist before
-
-This is generally due to the incompatibility of configurations in different versions. You can try to restore the default settings in Settings-Advanced-Advanced settings.
-
-If the problem is not solved, please submit an issue.
-
-## Contributions
-
-Please refer to the [contributing guidelines](CONTRIBUTING.md)
-
-## Development Reason
-
-When I was using Windows, I always used the handy screenshot software: [Snipaste - Screenshot + Pasting](https://zh.snipaste.com/). But when I switched to Linux, Snipaste was not supported (in 2019, it is now supported), so I chose [Flameshot](https://flameshot.org/), but unfortunately it does not have an intuitive color picker.
-
-Another reason I developed eSearch is that I enjoy using the "Immediate Information Search" tool on my phone such as [Smartisan Big Bang](https://www.smartisan.com/pr/videos/bigbang-introduction) or [Xiaomi Portal](https://www.miui.com/zt/miui9/index.html), but I couldn't find a similar alternative on my computer.
-
-So I simply developed my own "screenshot+OCR+search+pasting" software. I initially developed it with python+pyqt and created [Information-portal](https://github.com/xushengfeng/Information-portal.git), but because I am not familiar with pyqt, I switched to :electron: and developed this software. 😄
-
-## Appreciation and support
-
-Spiritual support: Light up the star🌟 in the upper right corner
-
-Material support: [Personal homepage Appreciation](https://github.com/xshengfeng)
-
-Actions: Feedback bugs, provide new function ideas,[Participate in development](CONTRIBUTING.md)
-
-## License
-
-[GPL-3.0](LICENSE) © xushengfeng
+ScreenX strictly adheres to the terms of GPL-3.0, documents modifications, and publishes full corresponding source code. For detailed modification notes and third-party notices, please see [NOTICE.md](./NOTICE.md) and [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).

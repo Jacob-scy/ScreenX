@@ -1,18 +1,21 @@
-import { initConfig, restoreConfig, runApp, sleep } from "./init.ts";
+import { initConfig, restoreConfig, runApp, sleep } from "./init";
 
-initConfig();
+async function run() {
+    initConfig();
 
-const app = runApp();
+    const app = runApp();
 
-await sleep(10000);
+    await sleep(10000);
+    await sleep(10000);
 
-await sleep(10000);
+    app.kill();
+    app.kill("SIGKILL");
 
-app.kill();
-app.kill("SIGKILL");
+    console.log("stop app");
 
-console.log("stop app");
+    restoreConfig();
 
-restoreConfig();
+    process.exit(0);
+}
 
-process.exit(0);
+run();

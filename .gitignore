@@ -21,3 +21,10 @@ script/make_aur/e-search/usr/share/applications/e-search.desktop
 *.tsbuildinfo
 temp/
 scratch/
+.wrangler/
+
+release/
+*.bak
+*.p12
+*.pfx
+.wrangler/

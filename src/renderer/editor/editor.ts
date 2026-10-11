@@ -61,7 +61,7 @@ type TabItem = {
 
 const tmpTextPath = path.join(
     os.tmpdir(),
-    `/eSearch/eSearch_${Date.now()}.txt`,
+    `/ScreenX/ScreenX_${Date.now()}.txt`,
 );
 
 import { rotateImg } from "esearch-ocr";
@@ -148,6 +148,11 @@ function iconBEl(src: IconType, title: string) {
 
 const nav = ele("nav");
 const navClipBtn = button(iconBEl("screen", "截屏 (Alt+C)")).on("click", () => {
+    console.log("[REAL_BUTTON_CLICK]", new Date().toISOString());
+    console.log(
+        "[BUTTON_TO_IPC] Sending trigger_screenshot",
+        new Date().toISOString(),
+    );
     renderSend("trigger_screenshot", []);
 });
 const navLongClipBtn = button(
@@ -156,10 +161,6 @@ const navLongClipBtn = button(
     renderSend("trigger_long_screenshot", []);
 });
 
-hotkeys("alt+c", (e) => {
-    e.preventDefault();
-    renderSend("trigger_screenshot", []);
-});
 hotkeys("alt+shift+l", (e) => {
     e.preventDefault();
     renderSend("trigger_long_screenshot", []);
@@ -1964,7 +1965,7 @@ async function edit(arg: EditToolsType) {
             const blob = new Blob([t.join("\n")], { type: "text/csv" });
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
-            a.download = "eSearch.csv";
+            a.download = "ScreenX.csv";
             a.click();
             break;
         }
@@ -2410,7 +2411,7 @@ function google(
     form.append(
         "encoded_image",
         new Blob([u8arr], { type: "image/png" }),
-        "eSearch.png",
+        "ScreenX.png",
     );
     form.append("image_content", "");
     const url = `https://lens.google.com/v3/upload?hl=zh-CN&re=df&st=${Date.now()}&vpw=1041&vph=779`;
@@ -2420,7 +2421,10 @@ function google(
     })
         .then(async (r) => {
             const text = await r.text();
-            const tmp = path.join(os.tmpdir(), "eSearch", "google.html");
+            const tmpDir = path.join(os.tmpdir(), "ScreenX");
+            if (!fs.existsSync(tmpDir))
+                fs.mkdirSync(tmpDir, { recursive: true });
+            const tmp = path.join(tmpDir, "google.html");
             fs.writeFileSync(tmp, text);
             callback(null, `file://${tmp}`);
         })

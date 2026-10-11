@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => ({
         plugins: [
             ViteImageOptimizer({
                 cache: true,
-                cacheLocation: path.join(tmpdir(), "eSearch_build"),
+                cacheLocation: path.join(tmpdir(), "ScreenX_build"),
                 logStats: false,
                 include: /.*\svg$/,
             }),

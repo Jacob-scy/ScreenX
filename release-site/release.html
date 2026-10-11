@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>版本发布与校验 (v1.0.0) - ScreenX</title>
+    <meta name="description" content="ScreenX v1.0.0 正式公开版发布说明、功能特性、构建产物下载及 SHA-256 文件完整性校验和。">
+    <meta name="keywords" content="ScreenX, 版本发布, SHA256, 完整性校验, 绿色版下载, Windows截图">
+    <link rel="canonical" href="https://screenx.jacobscy.xyz/release.html">
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192x192.png">
+    <link rel="shortcut icon" href="assets/favicon.ico">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Open Graph -->
+    <meta property="og:title" content="ScreenX v1.0.0 版本发布与校验清单">
+    <meta property="og:description" content="ScreenX v1.0.0 正式公开版发布记录、构建产物下载直链及 SHA-256 完整性校验值。">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://screenx.jacobscy.xyz/release.html">
+    <meta property="og:image" content="https://screenx.jacobscy.xyz/assets/ScreenX-og.png">
+</head>
+<body>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <header class="site-header">
+        <div class="container nav-container">
+            <a href="/" class="brand">
+                <img src="assets/logo.svg" alt="ScreenX Logo" class="brand-logo" width="36" height="36">
+                <span class="brand-name">ScreenX</span>
+                <span class="version-tag">v1.0.0</span>
+            </a>
+            <nav class="nav-menu">
+                <a href="/" class="nav-link">返回首页</a>
+                <a href="/#features" class="nav-link">功能特性</a>
+                <a href="/#faq" class="nav-link">常见问题</a>
+                <a href="/privacy.html" class="nav-link">隐私说明</a>
+            </nav>
+            <div class="nav-actions">
+                <a href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-Setup-1.0.0.exe" class="btn btn-sm btn-primary">下载安装包</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-header">
+            <div class="badge-pill">
+                <span class="badge-dot"></span>
+                <span>Release Notes · 正式公开版</span>
+            </div>
+            <h1 class="page-title">ScreenX v1.0.0 发布说明</h1>
+            <p class="page-subtitle">专为 Windows 10/11 设计的轻量级原生截图与桌面效率工具首个正式公开版本。</p>
+        </div>
+
+        <article class="article-content">
+            <h2>一、版本基本信息</h2>
+            <ul>
+                <li><strong>软件名称：</strong> ScreenX</li>
+                <li><strong>当前版本：</strong> v1.0.0 (正式公开版)</li>
+                <li><strong>发布时间：</strong> 2026 年 9 月</li>
+                <li><strong>适用平台：</strong> Windows 10 (1809 以上) / Windows 11 · x64 架构</li>
+                <li><strong>分发加速：</strong> Cloudflare R2 + 全球 CDN 边缘节点</li>
+                <li><strong>开源协议：</strong> GNU General Public License v3.0 (GPL-3.0)</li>
+            </ul>
+
+            <h2>二、核心功能支持</h2>
+            <ul>
+                <li><strong>原生截图体验：</strong> 深度优化的 Win32 GDI 物理缓冲捕获技术，支持高 DPI、多显示器精确选区。</li>
+                <li><strong>离线本地 OCR：</strong> 内置 PaddleOCR ONNX 轻量模型，纯本地推理提取图像文字，无需上传云端。</li>
+                <li><strong>一键划词搜索：</strong> OCR 选区文本一键流转到默认浏览器搜索引擎快速检索。</li>
+                <li><strong>快捷划词翻译：</strong> 选中文本即时呼出翻译面板，支持用户按需配置多翻译源对照。</li>
+                <li><strong>灵动桌面贴图：</strong> 截图或剪贴板图片快速钉在屏幕最前端，支持无级缩放与标注。</li>
+                <li><strong>全方向长截图：</strong> 支持横向与纵向自由滚动，特征重叠区域自动无缝拼接。</li>
+            </ul>
+
+            <h2>三、下载与分发文件</h2>
+            <div class="specs-box" style="margin: 20px 0;">
+                <ul class="specs-list">
+                    <li>
+                        <strong>官方安装包：</strong>
+                        <a href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-Setup-1.0.0.exe" class="link" target="_blank" rel="noopener noreferrer">ScreenX-Setup-1.0.0.exe</a>
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">(约 224.5 MB，推荐普通用户下载，带桌面快捷方式与卸载向导)</span>
+                    </li>
+                    <li>
+                        <strong>绿色便携版：</strong>
+                        <a href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-1.0.0-win.zip" class="link" target="_blank" rel="noopener noreferrer">ScreenX-1.0.0-win.zip</a>
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">(约 210.9 MB，解压即用，适合免安装体验)</span>
+                    </li>
+                    <li>
+                        <strong>GPL 纯净源码包：</strong>
+                        <a href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-1.0.0-source.zip" class="link" target="_blank" rel="noopener noreferrer">ScreenX-1.0.0-source.zip</a>
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">(约 32.4 MB，严格剔除构建缓存的合规完整源码归档)</span>
+                    </li>
+                    <li>
+                        <strong>版本元数据 API：</strong>
+                        <a href="https://download.jacobscy.xyz/latest.json" class="link" target="_blank" rel="noopener noreferrer">latest.json</a>
+                    </li>
+                </ul>
+            </div>
+
+            <h2>四、文件完整性校验 (SHA-256)</h2>
+            <p>为保障下载文件的完整性，防止因网络传输损坏或篡改，建议在下载后比对对应的 SHA-256 哈希值：</p>
+
+            <div class="checksum-box" id="checksum">
+<span class="hash-val">d7c94709408f765ee853aa6943bd057ea1ad32346c5bcb7f26e88d07460f9446</span>  ScreenX-Setup-1.0.0.exe
+<span class="hash-val">e8fbdd5001839910b90d1e4d679ddc3ccd1fcbd7f3ad385985f30736240b6f72</span>  ScreenX-1.0.0-win.zip
+<span class="hash-val">12105c84bae213b4dda2429fbde138f92ef8089d808c920b61d33a8de429b4df</span>  ScreenX-1.0.0-source.zip
+            </div>
+
+            <p style="font-size: 0.9rem; color: var(--text-muted);">
+                您可以通过 Windows PowerShell 快速验证下载文件的哈希值：<br>
+                <code>Get-FileHash &lt;下载的文件路径&gt; -Algorithm SHA256</code>
+            </p>
+
+            <h2>五、开源合规与上游归属</h2>
+            <p>
+                ScreenX 是基于 <strong>eSearch</strong> 项目修改与演进的自由开源软件，遵循 GNU General Public License v3.0 (GPL-3.0)。
+            </p>
+            <div class="license-callout">
+                ScreenX is a modified work based on eSearch.<br>
+                Original Project: <a href="https://github.com/xushengfeng/eSearch" target="_blank" rel="noopener noreferrer" class="link">https://github.com/xushengfeng/eSearch</a><br>
+                Original Copyright: Copyright &copy; xushengfeng<br>
+                License: GNU General Public License v3.0
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-container">
+            <div class="footer-left">
+                <div class="footer-brand">
+                    <img src="assets/logo.svg" alt="ScreenX Logo" width="24" height="24">
+                    <span>ScreenX</span>
+                </div>
+                <p class="footer-copy">
+                    &copy; 2026 ScreenX Contributors · Based on eSearch under GPL-3.0 License.
+                </p>
+            </div>
+            <div class="footer-right">
+                <a href="/" class="footer-link">首页</a>
+                <a href="/release.html" class="footer-link">版本发布</a>
+                <a href="/privacy.html" class="footer-link">隐私说明</a>
+                <a href="https://nav.jacobscy.xyz" class="footer-link" target="_blank" rel="noopener noreferrer">个人主站</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

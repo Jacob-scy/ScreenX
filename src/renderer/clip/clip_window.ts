@@ -492,7 +492,9 @@ function setDefaultAction(act: setting["框选后默认操作"] | undefined) {
     if (!act) return;
     autoDo = act;
     if (autoDo !== "no") {
-        toolsX[autoDo].el.el.style.backgroundColor = "var(--bar-focus-color)";
+        toolsX[autoDo].el.el.style.backgroundColor = "var(--accent-soft)";
+        toolsX[autoDo].el.el.style.boxShadow =
+            "inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 40%, transparent)";
     }
 }
 
@@ -1025,13 +1027,13 @@ function getClipPhotoSVG() {
     if (typeof fabricCanvas === "undefined") {
         svg.innerHTML = `<!--?xml version="1.0" encoding="UTF-8" standalone="no" ?-->
             <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="${mainCanvas.width}" height="${mainCanvas.height}" viewBox="0 0 1920 1080" xml:space="preserve">
-            <desc>Created with eSearch</desc>
+            <desc>Created with ScreenX</desc>
             </svg>`;
     } else {
         svg.innerHTML = fabricCanvas.toSVG();
         // @ts-ignore
         svg.querySelector("desc").innerHTML =
-            "Created with eSearch & Fabric.js";
+            "Created with ScreenX & Fabric.js";
     }
     const svgEl = svg.querySelector("svg") as SVGElement;
     svgEl.setAttribute("viewBox", finalRect.join(" "));
@@ -1048,6 +1050,9 @@ function getClipPhotoSVG() {
 function getClipPhoto() {
     const mainCtx = mainCanvas.getContext("2d")!;
     if (!finalRect) finalRect = [0, 0, mainCanvas.width, mainCanvas.height];
+    console.log(
+        `[CROP_SUCCESS] x=${finalRect[0]} y=${finalRect[1]} width=${finalRect[2]} height=${finalRect[3]}`,
+    );
 
     if (typeof fabricCanvas !== "undefined") {
         fabricCanvas.discardActiveObject();
@@ -1301,6 +1306,14 @@ function drawClipRect() {
     clipCtx.fillRect(0, 0, cw, ch);
     clipCtx.clearRect(x, y, width, height);
 
+    // Snipaste 风格选区：蓝色描边 + 白色外衬线
+    clipCtx.strokeStyle = "#2d7ff9";
+    clipCtx.lineWidth = 2;
+    clipCtx.strokeRect(x + 1, y + 1, width - 2, height - 2);
+    clipCtx.strokeStyle = "#ffffffaa";
+    clipCtx.lineWidth = 1;
+    clipCtx.strokeRect(x - 1, y - 1, width + 2, height + 2);
+
     for (const ix of x选区参考线.x) {
         clipCtx.fillStyle = c参考线颜色.选区参考线;
         clipCtx.fillRect(x + ix * width, y, 1, height);
@@ -1345,6 +1358,11 @@ function drawClipPoly(points: point[]) {
     ctx.fillStyle = "#0000";
     ctx.closePath();
     ctx.fill();
+
+    // Snipaste 风格自由选区边框
+    ctx.strokeStyle = "#2d7ff9";
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
     // 大小栏
     whBar(pointsOutRect(points));
@@ -3032,6 +3050,7 @@ for (const [_, { el, f }] of Object.entries(toolsX)) {
                 f();
             } else if (e.button === 1) {
                 el.el.style.backgroundColor = ""; // todo class
+                el.el.style.boxShadow = "";
                 autoDo = "no";
             }
     });
@@ -3722,6 +3741,7 @@ renderOn("clip_init", async ([_displays, imgBuffer, mainid, act, reqId]) => {
     console.log(
         `[SCREENSHOT_WINDOW_READY] requestId=${requestId} canvas=${mainCanvas.width}x${mainCanvas.height} ratio=${ratio} zoom=${editorP.zoom}`,
     );
+    console.log(`[CLIP_RENDERER_READY] requestId=${requestId}`);
 
     renderSend("clip_show", []);
     const screensEl = toolsX.screens.el;
@@ -4079,6 +4099,7 @@ clipCanvas.onmousedown = (e) => {
         inRect = isPointInPolygon({ x: e.offsetX, y: e.offsetY });
     }
     if (e.button === 0) {
+        console.log(`[CLIP_MOUSE_DOWN] x=${e.clientX} y=${e.clientY}`);
         clipStart(e, inRect);
     }
     if (e.button === 2) {
@@ -4097,6 +4118,7 @@ document.onmouseup = (e) => {
     if (e.button === 0) {
         if (selecting) {
             clipEnd(e);
+            console.log(`[CLIP_MOUSE_UP] x=${e.clientX} y=${e.clientY}`);
             // 抬起鼠标后工具栏跟随
             followBar({ x: e.clientX, y: e.clientY });
             // 框选后默认操作

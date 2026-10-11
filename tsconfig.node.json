@@ -19,6 +19,7 @@
         "src/main/*",
         "src/preload/*",
         "lib/**/*.ts",
-        "src/renderer/screenShot/*"
+        "src/renderer/screenShot/*",
+        "test/**/*"
     ]
 }

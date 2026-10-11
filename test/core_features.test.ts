@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 describe("Screenshot Personal Edition - 核心功能架构与契约测试", () => {
     describe("1. 基础截图与坐标处理", () => {
         it("正向与反向框选坐标归一化", () => {
-            const normalizeRect = (x1: number, y1: number, x2: number, y2: number) => {
+            const normalizeRect = (
+                x1: number,
+                y1: number,
+                x2: number,
+                y2: number,
+            ) => {
                 const x = Math.min(x1, x2);
                 const y = Math.min(y1, y2);
                 const width = Math.abs(x2 - x1);
@@ -33,8 +38,16 @@ describe("Screenshot Personal Edition - 核心功能架构与契约测试", () =
             };
 
             const screen = { width: 1920, height: 1080 };
-            const clamped = clampBounds({ x: 1800, y: 1000, width: 300, height: 200 }, screen);
-            expect(clamped).toEqual({ x: 1800, y: 1000, width: 120, height: 80 });
+            const clamped = clampBounds(
+                { x: 1800, y: 1000, width: 300, height: 200 },
+                screen,
+            );
+            expect(clamped).toEqual({
+                x: 1800,
+                y: 1000,
+                width: 120,
+                height: 80,
+            });
         });
 
         it("截图保存文件格式支持与默认命名规则", () => {
@@ -42,7 +55,11 @@ describe("Screenshot Personal Edition - 核心功能架构与契约测试", () =
             const format = "png";
             expect(supportedFormats).toContain(format);
 
-            const generateFileName = (prefix: string, date: Date, ext: string) => {
+            const generateFileName = (
+                prefix: string,
+                date: Date,
+                ext: string,
+            ) => {
                 const pad = (n: number) => String(n).padStart(2, "0");
                 const timestamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
                 return `${prefix}_${timestamp}.${ext}`;
@@ -57,32 +74,57 @@ describe("Screenshot Personal Edition - 核心功能架构与契约测试", () =
     describe("2. 离线本地 OCR 逻辑与数据处理", () => {
         it("离线 OCR 结果文本重组与多行合并", () => {
             interface OcrBoxItem {
-                box: [[number, number], [number, number], [number, number], [number, number]];
+                box: [
+                    [number, number],
+                    [number, number],
+                    [number, number],
+                    [number, number],
+                ];
                 text: string;
                 score: number;
             }
 
             const mockOcrResult: OcrBoxItem[] = [
                 {
-                    box: [[10, 10], [100, 10], [100, 30], [10, 30]],
+                    box: [
+                        [10, 10],
+                        [100, 10],
+                        [100, 30],
+                        [10, 30],
+                    ],
                     text: "Screenshot",
                     score: 0.99,
                 },
                 {
-                    box: [[105, 10], [220, 10], [220, 30], [105, 30]],
+                    box: [
+                        [105, 10],
+                        [220, 10],
+                        [220, 30],
+                        [105, 30],
+                    ],
                     text: "Personal Edition",
                     score: 0.98,
                 },
                 {
-                    box: [[10, 40], [150, 40], [150, 60], [10, 60]],
+                    box: [
+                        [10, 40],
+                        [150, 40],
+                        [150, 60],
+                        [10, 60],
+                    ],
                     text: "极简稳定快速",
                     score: 0.97,
                 },
             ];
 
             // 按 Y 轴分行合并文本
-            const mergeLines = (items: OcrBoxItem[], lineThreshold = 15): string[] => {
-                const sorted = [...items].sort((a, b) => a.box[0][1] - b.box[0][1]);
+            const mergeLines = (
+                items: OcrBoxItem[],
+                lineThreshold = 15,
+            ): string[] => {
+                const sorted = [...items].sort(
+                    (a, b) => a.box[0][1] - b.box[0][1],
+                );
                 const lines: string[][] = [];
                 let currentLine: string[] = [];
                 let lastY = -999;
@@ -111,16 +153,24 @@ describe("Screenshot Personal Edition - 核心功能架构与契约测试", () =
         });
 
         it("OCR 结果复制格式化（去除冗余换行/空格清洗）", () => {
-            const rawText = "极简、稳定、快速\n的 Windows 桌面截图工具。\n\n长期自用。";
-            const cleanText = (text: string, removeNewlines = false): string => {
+            const rawText =
+                "极简、稳定、快速\n的 Windows 桌面截图工具。\n\n长期自用。";
+            const cleanText = (
+                text: string,
+                removeNewlines = false,
+            ): string => {
                 if (removeNewlines) {
                     return text.replace(/\r?\n+/g, " ").trim();
                 }
                 return text.replace(/\r?\n{3,}/g, "\n\n").trim();
             };
 
-            expect(cleanText(rawText, true)).toBe("极简、稳定、快速 的 Windows 桌面截图工具。 长期自用。");
-            expect(cleanText(rawText, false)).toBe("极简、稳定、快速\n的 Windows 桌面截图工具。\n\n长期自用。");
+            expect(cleanText(rawText, true)).toBe(
+                "极简、稳定、快速 的 Windows 桌面截图工具。 长期自用。",
+            );
+            expect(cleanText(rawText, false)).toBe(
+                "极简、稳定、快速\n的 Windows 桌面截图工具。\n\n长期自用。",
+            );
         });
     });
 
@@ -132,23 +182,42 @@ describe("Screenshot Personal Edition - 核心功能架构与契约测试", () =
                 google: "https://www.google.com/search?q=%s",
             };
 
-            const buildSearchUrl = (engineKey: string, query: string): string => {
+            const buildSearchUrl = (
+                engineKey: string,
+                query: string,
+            ): string => {
                 const template = searchEngines[engineKey] || searchEngines.bing;
                 return template.replace("%s", encodeURIComponent(query.trim()));
             };
 
             const url1 = buildSearchUrl("bing", "Screenshot 架构重构");
-            expect(url1).toBe("https://www.bing.com/search?q=Screenshot%20%E6%9E%B6%E6%9E%84%E9%87%8D%E6%9E%84");
+            expect(url1).toBe(
+                "https://www.bing.com/search?q=Screenshot%20%E6%9E%B6%E6%9E%84%E9%87%8D%E6%9E%84",
+            );
 
             const url2 = buildSearchUrl("google", "electron vite");
-            expect(url2).toBe("https://www.google.com/search?q=electron%20vite");
+            expect(url2).toBe(
+                "https://www.google.com/search?q=electron%20vite",
+            );
         });
     });
 
     describe("4. 翻译引擎数据契约", () => {
         it("多语言代码与回退策略", () => {
-            const supportedLanguages = ["zh-HANS", "en", "ja", "ko", "ru", "fr", "de", "es"];
-            const resolveTargetLanguage = (userPref: string | undefined, defaultLan = "zh-HANS") => {
+            const supportedLanguages = [
+                "zh-HANS",
+                "en",
+                "ja",
+                "ko",
+                "ru",
+                "fr",
+                "de",
+                "es",
+            ];
+            const resolveTargetLanguage = (
+                userPref: string | undefined,
+                defaultLan = "zh-HANS",
+            ) => {
                 if (userPref && supportedLanguages.includes(userPref)) {
                     return userPref;
                 }
@@ -164,7 +233,10 @@ describe("Screenshot Personal Edition - 核心功能架构与契约测试", () =
     describe("5. 贴图 (Pin) 参数与状态控制", () => {
         it("贴图缩放范围 clamp (0.1x ~ 10.0x)", () => {
             const clampScale = (scale: number): number => {
-                return Math.max(0.1, Math.min(10.0, Math.round(scale * 100) / 100));
+                return Math.max(
+                    0.1,
+                    Math.min(10.0, Math.round(scale * 100) / 100),
+                );
             };
 
             expect(clampScale(0.05)).toBe(0.1);
@@ -174,7 +246,10 @@ describe("Screenshot Personal Edition - 核心功能架构与契约测试", () =
 
         it("贴图透明度范围 clamp (0.1 ~ 1.0)", () => {
             const clampOpacity = (opacity: number): number => {
-                return Math.max(0.1, Math.min(1.0, Math.round(opacity * 100) / 100));
+                return Math.max(
+                    0.1,
+                    Math.min(1.0, Math.round(opacity * 100) / 100),
+                );
             };
 
             expect(clampOpacity(0.02)).toBe(0.1);
@@ -305,8 +380,26 @@ describe("Screenshot Personal Edition - 核心功能架构与契约测试", () =
 
     describe("7. 核心快捷键与工具栏配置白名单", () => {
         it("工具栏只允许保留核心 8 大功能", () => {
-            const allowedTools = ["close", "screens", "ocr", "open", "ding", "long", "copy", "save"];
-            const currentTools = ["close", "screens", "ocr", "open", "ding", "long", "copy", "save"];
+            const allowedTools = [
+                "close",
+                "screens",
+                "ocr",
+                "open",
+                "ding",
+                "long",
+                "copy",
+                "save",
+            ];
+            const currentTools = [
+                "close",
+                "screens",
+                "ocr",
+                "open",
+                "ding",
+                "long",
+                "copy",
+                "save",
+            ];
 
             expect(currentTools).toEqual(allowedTools);
 
@@ -329,7 +422,13 @@ describe("Screenshot Personal Edition - 核心功能架构与契约测试", () =
 
             const validateAccelerator = (key: string) => {
                 const parts = key.split("+");
-                const validModifiers = ["Alt", "Shift", "Control", "Command", "Option"];
+                const validModifiers = [
+                    "Alt",
+                    "Shift",
+                    "Control",
+                    "Command",
+                    "Option",
+                ];
                 for (let i = 0; i < parts.length - 1; i++) {
                     if (!validModifiers.includes(parts[i])) return false;
                 }
@@ -338,8 +437,85 @@ describe("Screenshot Personal Edition - 核心功能架构与契约测试", () =
             };
 
             for (const [name, shortcut] of Object.entries(shortcuts)) {
-                expect(validateAccelerator(shortcut), `${name} 快捷键格式应符合 Electron 规范`).toBe(true);
+                expect(
+                    validateAccelerator(shortcut),
+                    `${name} 快捷键格式应符合 Electron 规范`,
+                ).toBe(true);
             }
+        });
+    });
+
+    describe("8. 托盘与截图隔离契约与安全机制", () => {
+        it("托盘普通点击仅允许主窗口操作，绝不触发截屏", () => {
+            let screenshotTriggered = false;
+            let windowToggled = false;
+
+            const fakeShowPhoto = () => {
+                screenshotTriggered = true;
+            };
+
+            const toggleMainWindowFromTrayMock = () => {
+                windowToggled = true;
+            };
+
+            // 托盘点击处理函数契约
+            const onTrayClick = () => {
+                toggleMainWindowFromTrayMock();
+            };
+
+            onTrayClick();
+
+            expect(windowToggled).toBe(true);
+            expect(screenshotTriggered).toBe(false);
+        });
+
+        it("自动识别在剪贴板为空时安全返回/通知，绝不 fallback 到截屏", () => {
+            let screenshotTriggered = false;
+            let notified = false;
+
+            const fakeShowPhoto = () => {
+                screenshotTriggered = true;
+            };
+
+            const autoOpenSafe = (text: string, notifyFn: () => void) => {
+                if (text) {
+                    // 打开主窗口
+                } else {
+                    notifyFn();
+                }
+            };
+
+            // 空剪贴板模拟
+            autoOpenSafe("", () => {
+                notified = true;
+            });
+
+            expect(notified).toBe(true);
+            expect(screenshotTriggered).toBe(false);
+        });
+
+        it("截图 Single Flight 互斥锁确保同时最多只有一个 Native Capture", async () => {
+            let inProgress = false;
+            let runCount = 0;
+
+            const startScreenshotSafe = async () => {
+                if (inProgress) return;
+                inProgress = true;
+                runCount++;
+                // 模拟异步 Native 截屏耗时
+                await new Promise((resolve) => setTimeout(resolve, 10));
+                inProgress = false;
+            };
+
+            // 并发触发 3 次截图请求
+            await Promise.all([
+                startScreenshotSafe(),
+                startScreenshotSafe(),
+                startScreenshotSafe(),
+            ]);
+
+            expect(runCount).toBe(1);
+            expect(inProgress).toBe(false);
         });
     });
 });

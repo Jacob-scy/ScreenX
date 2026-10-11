@@ -1,14 +1,14 @@
-import fs from "node:fs";
-import { checkbox, confirm, select } from "@inquirer/prompts";
-import type { setting } from "../../src/ShareTypes";
-import path from "node:path";
-import os from "node:os";
 import { execSync } from "node:child_process";
-import { xset } from "../../lib/store/parse.ts";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { checkbox, confirm, select } from "@inquirer/prompts";
+import { xset } from "../../lib/store/parse";
+import type { setting } from "../../src/ShareTypes";
 
 type state = boolean | null;
 
-const testConfigTempPath = path.join(os.tmpdir(), "eSearch_test_dir");
+const testConfigTempPath = path.join(os.tmpdir(), "ScreenX_test_dir");
 
 const someSetting = {
     "引擎.翻译": [{ name: "翻译", url: "translate/?text=%s" }],
@@ -41,6 +41,7 @@ const someSetting = {
         },
     ],
     "贴图.强制鼠标穿透": "alt+x",
+    "屏幕翻译.语言": { from: "", to: "" },
 };
 
 const testList: {
@@ -214,32 +215,24 @@ const defaultSetting: setting = {
     全局工具快捷键: {
         close: "",
         ocr: "",
-        search: "",
-        QR: "",
         open: "",
         ding: "",
-        record: "",
         long: "",
         copy: "",
         save: "",
         screens: "",
         translate: "",
-        editor: "",
     },
     工具快捷键: {
         close: "Escape",
         ocr: "Enter",
-        search: "",
-        QR: "",
         open: "",
         ding: "",
-        record: "",
         long: "",
         copy: isMac ? "Command+C" : "Control+C",
         save: isMac ? "Command+S" : "Control+S",
         screens: "",
         translate: "",
-        editor: "",
     },
     鼠标快捷键: {
         右键: "取色器",
@@ -344,14 +337,10 @@ const defaultSetting: setting = {
             "close",
             "screens",
             "ocr",
-            "search",
-            "QR",
             "open",
             "ding",
-            "record",
             "long",
             "translate",
-            "editor",
             "copy",
             "save",
         ],
@@ -430,6 +419,7 @@ const defaultSetting: setting = {
         离线切换: true,
         识别段落: true,
         整体方向识别: false,
+        全局det路径: "ppocr6_small_det.onnx",
     },
     离线OCR: [
         {
@@ -443,43 +433,13 @@ const defaultSetting: setting = {
             speed: "fast",
         },
     ],
-    AI: {
-        运行后端: "cpu",
-        在线模型: [],
-    },
-    在线OCR: {
-        baidu: {
-            url: "",
-            id: "",
-            secret: "",
-            time: 0,
-            token: "",
-        },
-        youdao: {
-            id: "",
-            secret: "",
-        },
-    },
-    以图搜图: {
-        引擎: "baidu",
-    },
-    自动打开链接: false,
-    自动搜索中文占比: 0.2,
-    浏览器中打开: false,
-    浏览器: {
-        标签页: {
-            自动关闭: true,
-            小: false,
-            灰度: false,
-        },
-    },
     保存: {
         默认格式: "png",
-        保存路径: { 图片: "", 视频: "" },
+        保存路径: { 图片: "" },
         快速保存: false,
         保存并复制: false,
     },
-    保存名称: { 前缀: "eSearch-", 时间: "YYYY-MM-DD-HH-mm-ss-S", 后缀: "" },
+    保存名称: { 前缀: "ScreenX-", 时间: "YYYY-MM-DD-HH-mm-ss-S", 后缀: "" },
     框选后默认操作: "no",
     快速截屏: { 模式: "clip", 路径: "" },
     引擎: {
@@ -547,73 +507,6 @@ const defaultSetting: setting = {
         模式: "小版本",
         忽略版本: "",
     },
-    录屏: {
-        模式: "normal",
-        自动录制: true,
-        自动录制延时: 3,
-        视频比特率: 2.5,
-        摄像头: {
-            开启: false,
-            镜像: false,
-            设备: "",
-            背景: {
-                模式: "none",
-                模糊: 40,
-                imgUrl: "",
-                videoUrl: "",
-                fit: "cover",
-            },
-        },
-        音频: {
-            设备列表: [],
-            启用系统内录: true,
-        },
-        转换: {
-            格式: "webm",
-            码率: 2.5,
-            帧率: 30,
-            其他: "",
-            高质量gif: false,
-            分段: 10,
-        },
-        提示: {
-            键盘: {
-                开启: false,
-                位置: { x: "+", y: "+", offsetX: 4, offsetY: 4 },
-                大小: 1,
-            },
-            鼠标: {
-                开启: false,
-            },
-            光标: {
-                开启: false,
-                样式: "width: 24px;\nheight: 24px;\nborder-radius: 50%;\nbackground-color: #ff08;",
-            },
-        },
-        大小: {
-            x: 0,
-            y: 0,
-            width: 800,
-            height: 600,
-        },
-        超级录屏: {
-            编码选择: "性能优先",
-            关键帧间隔: 150,
-            格式: "gif",
-            缩放: 2,
-            自动停止录制: 5,
-            导出后关闭: false,
-        },
-    },
-    屏幕翻译: {
-        type: "ding",
-        dTime: 3000,
-        css: { bg: "", text: "" },
-        语言: {
-            from: "",
-            to: "",
-        },
-    },
     翻译: {
         翻译器: [],
         收藏: {
@@ -624,6 +517,7 @@ const defaultSetting: setting = {
     },
     额外截屏器: { 命令: "", 位置: "" },
     使用XDGDesktopPortal: false,
+    自定义屏幕属性: [],
     连拍: {
         数: 5,
         间隔: 100,
@@ -633,7 +527,6 @@ const defaultSetting: setting = {
         t: 800,
         方向: "y",
     },
-    高级图片编辑: { 配置: [], 默认配置: "" },
     网络: {
         github镜像: {
             启用: true,
@@ -715,34 +608,38 @@ console.log(
     `共${testResultsL.length}个测试，通过${testResultsL.filter((i) => i.state === true).length}，未通过${testResultsL.filter((i) => i.state === false).length}，将进行${testResultsL.filter((i) => i.state === null).length}个测试`,
 );
 
-const needRebuild = await confirm({
-    message: "是否需要重新构建项目？",
-    default: false,
-});
-
-if (needRebuild) {
-    execSync("npm run pack");
-}
-
-const isEdit = await confirm({
-    message: "是否编辑需要测试的项目？",
-});
-
-if (isEdit) {
-    const r = testResultsL.map((i) => ({
-        name: `${i.name}${i.state === false ? " (失败)" : ""}`,
-        checked: i.state === null,
-        value: i.name,
-    }));
-    const results = await checkbox({
-        message: "请选择需要测试的功能",
-        choices: r,
+async function run() {
+    const needRebuild = await confirm({
+        message: "是否需要重新构建项目？",
+        default: false,
     });
-    const x: { name: string; state: state }[] = testResultsL.map((i) => ({
-        name: i.name,
-        state: results.includes(i.name) ? null : i.state,
-    }));
-    saveTestResults(x);
+
+    if (needRebuild) {
+        execSync("npm run pack");
+    }
+
+    const isEdit = await confirm({
+        message: "是否编辑需要测试的项目？",
+    });
+
+    if (isEdit) {
+        const r = testResultsL.map((i) => ({
+            name: `${i.name}${i.state === false ? " (失败)" : ""}`,
+            checked: i.state === null,
+            value: i.name,
+        }));
+        const results = await checkbox({
+            message: "请选择需要测试的功能",
+            choices: r,
+        });
+        const x: { name: string; state: state }[] = testResultsL.map((i) => ({
+            name: i.name,
+            state: results.includes(i.name) ? null : i.state,
+        }));
+        saveTestResults(x);
+    }
+
+    await selectTest();
 }
 
-await selectTest();
+run();

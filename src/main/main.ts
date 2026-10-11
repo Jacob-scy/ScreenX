@@ -60,8 +60,10 @@ import type {
     功能,
 } from "../ShareTypes";
 
+app.setName("ScreenX");
+
 const runPath = join(resolve(__dirname, ""), "../../");
-const tmpDir = join(tmpdir(), "Screenshot");
+const tmpDir = join(tmpdir(), "ScreenX");
 
 // 自定义用户路径
 try {
@@ -84,6 +86,8 @@ try {
 
     if (userDataPath) app.setPath("userData", userDataPath);
 } catch (e) {}
+
+app.name = "ScreenX";
 
 const store = new Store({
     configPath: join(app.getPath("userData"), "config.json"),
@@ -108,6 +112,7 @@ let /** 是否开启开发模式 */ dev: boolean;
 if (
     process.argv.includes("-d") ||
     import.meta.env.DEV ||
+    process.env.SCREENX_DEV ||
     process.env.ESEARCH_DEV ||
     store.get("dev")
 ) {
@@ -116,20 +121,21 @@ if (
     dev = false;
 }
 
-if (dev) {
-    setInterval(() => {
-        const usage = process.memoryUsage();
-        const main = usage.rss / 1024 / 1024;
-        let rander = 0;
-        for (const i of app.getAppMetrics().filter((i) => i.type === "Tab")) {
-            rander += i.memory.workingSetSize;
-        }
-        rander = rander / 1024;
-        console.log(
-            `Memory： ${main.toFixed(7)} + ${rander.toFixed(7)} = ${main + rander}`,
-        );
-    }, 1500);
-}
+// dev 模式内存日志刷屏已停用（诊断后移除）
+// if (dev) {
+//     setInterval(() => {
+//         const usage = process.memoryUsage();
+//         const main = usage.rss / 1024 / 1024;
+//         let rander = 0;
+//         for (const i of app.getAppMetrics().filter((i) => i.type === "Tab")) {
+//             rander += i.memory.workingSetSize;
+//         }
+//         rander = rander / 1024;
+//         console.log(
+//             `Memory： ${main.toFixed(7)} + ${rander.toFixed(7)} = ${main + rander}`,
+//         );
+//     }, 1500);
+// }
 
 const logs: {
     from: "screenShot" | "ding" | "mainWindow";
@@ -232,13 +238,22 @@ async function copyText(callback: (t: string) => void) {
     }, 300);
 }
 
-/** 自动判断选中搜索还是截屏搜索 */
+/** 自动判断选中搜索还是截屏搜索 (空剪贴板安全返回，不触发截屏) */
 function autoOpen() {
-    copyText((t) => {
-        if (t) {
-            createMainWindow({ type: "text", content: t });
+    copyText((text) => {
+        if (text) {
+            createMainWindow({ type: "text", content: text });
         } else {
-            showPhoto();
+            console.log(
+                "[AUTO_OPEN] clipboard empty, skip screenshot fallback",
+            );
+            if (Notification.isSupported()) {
+                new Notification({
+                    title: app.name,
+                    body: `${t("剪贴板")}: ${t("未找到内容") || "未检测到内容"}`,
+                    icon: join(runPath, "assets/logo/64x64.png"),
+                }).show();
+            }
         }
     });
 }
@@ -534,6 +549,7 @@ process.on("unhandledRejection", (e) => {
 });
 
 app.whenReady().then(() => {
+    console.log(`[MAIN_PROCESS_PID] ${process.pid} ppid=${process.ppid}`);
     console.log(`Screenshot ${app.getVersion()} 启动`);
 
     crashReporter.start({ uploadToServer: false });
@@ -553,6 +569,7 @@ app.whenReady().then(() => {
     if (store.get("托盘") !== "无") {
         // 托盘
         tray = new Tray(join(runPath, "assets/logo/32x32.png"));
+        console.log("[TRAY_CREATE]");
 
         function update() {
             tray?.setContextMenu(contextMenu);
@@ -722,16 +739,14 @@ app.whenReady().then(() => {
             },
         ]);
         tray?.setToolTip(app.getName());
-        if (store.get("点击托盘自动截图")) {
-            tray?.on("click", () => {
-                showPhoto();
-            });
-            tray?.on("right-click", () => {
-                if (contextMenu) tray?.popUpContextMenu(contextMenu);
-            });
-        } else {
-            if (contextMenu) tray?.setContextMenu(contextMenu);
-        }
+        tray?.on("click", () => {
+            console.log("[TRAY_CLICK]");
+            toggleMainWindowFromTray();
+        });
+        tray?.on("right-click", () => {
+            if (contextMenu) tray?.popUpContextMenu(contextMenu);
+        });
+        if (contextMenu) tray?.setContextMenu(contextMenu);
     }
 
     // 启动时提示
@@ -742,22 +757,41 @@ app.whenReady().then(() => {
             icon: join(runPath, "assets/logo/64x64.png"),
         }).show();
 
+    console.log(`[SHORTCUT_REGISTER_PID] ${process.pid}`);
     const 快捷键 = store.get("快捷键");
     console.log("【快捷键配置】:", JSON.stringify(快捷键));
     for (const [k, m] of typedEntries(快捷键)) {
         try {
             if (m.key) {
-                const ok = globalShortcut.register(m.key, () => {
-                    console.log(
-                        `[GLOBAL_SCREENSHOT_SHORTCUT] key=${m.key} action=${k}`,
-                    );
-                    if (k === "截屏搜索") {
-                        startScreenshot(undefined, "global-shortcut");
+                const keyStr = m.key;
+                const ok = globalShortcut.register(keyStr, () => {
+                    const nowIso = new Date().toISOString();
+                    if (keyStr.toLowerCase() === "alt+c" || k === "截屏搜索") {
+                        console.log(`[REAL_ALT_C_KEYDOWN] ${nowIso}`);
+                        console.log(
+                            "[ALT_C_TO_SCREENSHOT] Calling startScreenshot from Alt+C",
+                        );
+                        try {
+                            startScreenshot(undefined, "global-shortcut");
+                        } catch (error) {
+                            console.error("[REAL_ALT_C_EXCEPTION]", error);
+                        }
                     } else {
+                        console.log(
+                            `[GLOBAL_SHORTCUT_TRIGGER] key=${keyStr} action=${k}`,
+                        );
                         快捷键函数[k]();
                     }
                 });
-                console.log(`【注册快捷键】 ${k}: ${m.key} -> 结果: ${ok}`);
+                console.log(
+                    `[SHORTCUT_REGISTER_RESULT] ${k}: ${keyStr} -> ok=${ok}`,
+                );
+                if (keyStr.toLowerCase() === "alt+c") {
+                    console.log(
+                        "[SHORTCUT_IS_REGISTERED] Alt+C =",
+                        globalShortcut.isRegistered("Alt+C"),
+                    );
+                }
             }
         } catch (error) {
             console.error(`【注册快捷键异常】 ${k}:`, error);
@@ -765,6 +799,7 @@ app.whenReady().then(() => {
             store.set("快捷键", 快捷键);
         }
     }
+
     const 工具快捷键 = store.get("全局工具快捷键");
     console.log("【全局工具快捷键配置】:", JSON.stringify(工具快捷键));
     for (const [k, m] of typedEntries(工具快捷键)) {
@@ -798,8 +833,8 @@ app.whenReady().then(() => {
 
     setTray();
 
-    // 默认展示主窗口，便于直观测试与交互
-    createMainWindow({ type: "text", content: "" });
+    // 恢复原版行为：启动仅驻留托盘，不强制弹出主窗口
+    // createMainWindow({ type: "text", content: "" });
 });
 
 function setTray() {
@@ -1009,13 +1044,22 @@ function pushLog(op: (typeof logs)[0]) {
 let clipWindow: BrowserWindow | null = null;
 let clipWindowLoaded = false;
 const getClipWin = async () => {
+    console.log("[GET_CLIP_WIN_ENTER]");
     if (clipWindow && !clipWindow.isDestroyed()) {
-        if (clipWindowLoaded || !clipWindow.webContents.isLoading()) {
+        const loading = clipWindow.webContents.isLoading();
+        console.log(
+            `[GET_CLIP_WIN_STATE] clipWindowLoaded=${clipWindowLoaded} isLoading=${loading}`,
+        );
+        if (clipWindowLoaded || !loading) {
             clipWindowLoaded = true;
+            console.log(
+                "[GET_CLIP_WIN_RETURN] Immediate return existing ready window",
+            );
             return clipWindow;
         }
     }
     if (!clipWindow || clipWindow.isDestroyed()) {
+        console.log("[GET_CLIP_WIN_STATE] Creating new clip window");
         clipWindow = createClipWindow();
     }
 
@@ -1025,7 +1069,12 @@ const getClipWin = async () => {
             if (!resolved) {
                 resolved = true;
                 clipWindowLoaded = true;
-                console.log("[MAIN] getClipWin timeout, forced resolving");
+                console.log(
+                    "[GET_CLIP_WIN_TIMEOUT] Forced resolving after 1200ms",
+                );
+                console.log(
+                    "[GET_CLIP_WIN_RETURN] Returning window after timeout",
+                );
                 re(clipWindow as BrowserWindow);
             }
         }, 1200);
@@ -1035,7 +1084,8 @@ const getClipWin = async () => {
                 resolved = true;
                 clearTimeout(timer);
                 clipWindowLoaded = true;
-                console.log("[MAIN] getClipWin did-finish-load resolved");
+                console.log("[GET_CLIP_WIN_RESOLVE] did-finish-load triggered");
+                console.log("[GET_CLIP_WIN_RETURN] Returning window on load");
                 return re(clipWindow as BrowserWindow);
             }
         });
@@ -1049,10 +1099,10 @@ function createClipWindow() {
         height: screen.getPrimaryDisplay().workAreaSize.height,
         show: false,
         alwaysOnTop: true,
-        fullscreenable: true,
         transparent: true,
         frame: false,
-        resizable: true,
+        resizable: false,
+        fullscreenable: false,
         skipTaskbar: true,
         autoHideMenuBar: true,
         movable: false,
@@ -1069,7 +1119,8 @@ function createClipWindow() {
 
     rendererPath(_clipWindow, "capture.html");
 
-    if (dev) _clipWindow.webContents.openDevTools();
+    // 覆盖层窗口绝对不能打开 DevTools，否则会破坏透明通道并弹出开发者工具窗口
+    // if (dev) _clipWindow.webContents.openDevTools();
 
     _clipWindow.webContents.on(
         "did-fail-load",
@@ -1094,7 +1145,9 @@ function createClipWindow() {
     });
     _clipWindow.webContents.once("did-finish-load", () => {
         clipWindowLoaded = true;
-        console.log("[CREATE_CLIP_WINDOW] did-finish-load SUCCESS");
+        console.log(
+            `[CLIP_WINDOW_LOAD] did-finish-load SUCCESS url=${_clipWindow.webContents.getURL()} isLoading=${_clipWindow.webContents.isLoading()} webContentsId=${_clipWindow.webContents.id} windowId=${_clipWindow.id}`,
+        );
     });
     _clipWindow.webContents.on("console-message", (d) => {
         console.log(`[CLIP_RENDERER][${d.level}] ${d.message}`);
@@ -1159,7 +1212,7 @@ mainOn("getMousePos", (_, e) => {
 });
 mainOn("trigger_screenshot", () => {
     console.log(
-        "[BUTTON_SCREENSHOT_CLICK] trigger_screenshot IPC received in main process",
+        "[MAIN_SCREENSHOT_IPC] Received trigger_screenshot from renderer",
     );
     startScreenshot(undefined, "button");
 });
@@ -1170,8 +1223,16 @@ mainOn("trigger_long_screenshot", () => {
     startLongScreenshot("button");
 });
 
-function captureDesktopPhysicalBuffer(): Buffer | null {
+let nativeCaptureInProgress = false;
+
+async function captureDesktopPhysicalBuffer(): Promise<Buffer | null> {
     if (process.platform !== "win32") return null;
+    if (nativeCaptureInProgress) {
+        console.warn("[NATIVE_CAPTURE_IGNORED] reason=in-progress");
+        return null;
+    }
+    nativeCaptureInProgress = true;
+    console.log("[NATIVE_CAPTURE_START]");
     const fs = require("node:fs");
     const path = require("node:path");
     const cp = require("node:child_process");
@@ -1191,26 +1252,58 @@ function captureDesktopPhysicalBuffer(): Buffer | null {
         ),
     ];
     const exe = candidates.find((p) => fs.existsSync(p));
-    if (!exe) return null;
+    if (!exe) {
+        console.error("[NATIVE_CAPTURE_ERROR] wincapture.exe not found");
+        nativeCaptureInProgress = false;
+        return null;
+    }
 
+    let tmpFile = "";
     try {
         const tmpDir = os.tmpdir();
-        const tmpFile = path.join(
+        tmpFile = path.join(
             tmpDir,
             `wincap_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`,
         );
-        cp.execFileSync(exe, [tmpFile]);
+        await new Promise<void>((resolve, reject) => {
+            let settled = false;
+            const done = (err?: Error | null) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeout);
+                child.removeListener("error", onError);
+                if (err) reject(err);
+                else resolve();
+            };
+            const onError = (err: Error) => done(err);
+            const child = cp.execFile(
+                exe,
+                [tmpFile],
+                { windowsHide: true },
+                (err: Error | null) => done(err),
+            );
+            const timeout = setTimeout(() => {
+                child.kill();
+                console.error("[NATIVE_CAPTURE_ERROR] timed out after 5000ms");
+            }, 5000);
+            child.once("error", onError);
+        });
         if (fs.existsSync(tmpFile)) {
-            const buf = fs.readFileSync(tmpFile);
-            try {
-                fs.unlinkSync(tmpFile);
-            } catch {}
+            const buf = await fs.promises.readFile(tmpFile);
             if (buf && buf.length > 20 * 1024) {
                 return buf;
             }
+            console.error("[NATIVE_CAPTURE_ERROR] invalid PNG output");
         }
     } catch (err) {
-        console.error("[MAIN][WIN_NATIVE_CAPTURE_ERROR]", err);
+        console.error("[NATIVE_CAPTURE_ERROR]", err);
+    } finally {
+        if (tmpFile) {
+            try {
+                await fs.promises.unlink(tmpFile);
+            } catch {}
+        }
+        nativeCaptureInProgress = false;
     }
     return null;
 }
@@ -1218,53 +1311,66 @@ function captureDesktopPhysicalBuffer(): Buffer | null {
 /**
  * 统一截图入口 (按钮、快捷键、托盘共享同一函数)
  */
-function startScreenshot(imgPath?: string, source = "unknown") {
-    const requestId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    console.log(`[SCREENSHOT_REQUEST] requestId=${requestId} source=${source}`);
-    console.log(`[SCREENSHOT_CAPTURE_START] requestId=${requestId}`);
+let screenshotInProgress = false;
 
-    if (imgPath) {
-        readFile(imgPath, (err, data) => {
-            if (err) {
-                console.error(
-                    `[SCREENSHOT_CAPTURE_FAILED] requestId=${requestId}:`,
-                    err,
-                );
-            } else {
-                console.log(
-                    `[SCREENSHOT_CAPTURE_SUCCESS] requestId=${requestId} size=${data?.length} bytes (from file)`,
-                );
-            }
-            sendCaptureEvent(data, undefined, requestId);
-        });
-    } else {
-        const realBuf = captureDesktopPhysicalBuffer();
-        if (realBuf) {
-            console.log(
-                `[SCREENSHOT_CAPTURE_SUCCESS] requestId=${requestId} size=${realBuf.length} bytes (native captured)`,
-            );
-        } else {
-            console.warn(
-                `[SCREENSHOT_CAPTURE_WARN] requestId=${requestId} native capture returned null, will use renderer fallback`,
-            );
+async function startScreenshot(imgPath?: string, source = "unknown") {
+    if (screenshotInProgress) {
+        console.warn(
+            `[SCREENSHOT_IGNORED] source=${source} reason=in-progress`,
+        );
+        return;
+    }
+    screenshotInProgress = true;
+    const requestId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    console.log(`[SCREENSHOT_START] requestId=${requestId} source=${source}`);
+    console.log(`[NATIVE_CAPTURE_BEGIN] requestId=${requestId}`);
+
+    try {
+        const data = imgPath
+            ? await new Promise<Buffer | undefined>((resolve) => {
+                  readFile(imgPath, (err, buffer) => {
+                      if (err) {
+                          console.error(
+                              `[NATIVE_CAPTURE_ERROR] requestId=${requestId}:`,
+                              err,
+                          );
+                          resolve(undefined);
+                      } else {
+                          resolve(buffer);
+                      }
+                  });
+              })
+            : (await captureDesktopPhysicalBuffer()) || undefined;
+        if (!data) {
+            console.error(`[NATIVE_CAPTURE_ERROR] requestId=${requestId}`);
+            return;
         }
-        sendCaptureEvent(realBuf || undefined, undefined, requestId);
+        console.log(
+            `[NATIVE_CAPTURE_SUCCESS] requestId=${requestId} size=${data.length} bytes`,
+        );
+        await sendCaptureEvent(data, undefined, requestId);
+    } catch (error) {
+        console.error(`[SCREENSHOT_ERROR] requestId=${requestId}`, error);
+    } finally {
+        screenshotInProgress = false;
     }
 }
 
-function startLongScreenshot(source = "unknown") {
+async function startLongScreenshot(source = "unknown") {
     const requestId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     console.log(
         `[SCREENSHOT_REQUEST] requestId=${requestId} source=${source} type=long`,
     );
     console.log(`[SCREENSHOT_CAPTURE_START] requestId=${requestId}`);
-    const realBuf = captureDesktopPhysicalBuffer();
-    if (realBuf) {
-        console.log(
-            `[SCREENSHOT_CAPTURE_SUCCESS] requestId=${requestId} size=${realBuf.length} bytes (native captured)`,
-        );
+    const realBuf = await captureDesktopPhysicalBuffer();
+    if (!realBuf) {
+        console.error(`[NATIVE_CAPTURE_ERROR] requestId=${requestId}`);
+        return;
     }
-    sendCaptureEvent(realBuf || undefined, "long", requestId);
+    console.log(
+        `[SCREENSHOT_CAPTURE_SUCCESS] requestId=${requestId} size=${realBuf.length} bytes (native captured)`,
+    );
+    sendCaptureEvent(realBuf, "long", requestId);
 }
 
 function showPhoto(imgPath?: string) {
@@ -1287,12 +1393,16 @@ async function fullScreen(requestId?: string) {
         width: nearestScreen.bounds.width,
         height: nearestScreen.bounds.height,
     });
+    console.log(
+        `[CLIP_WINDOW_BOUNDS] requestId=${requestId || "unknown"} bounds=[${nearestScreen.bounds.x},${nearestScreen.bounds.y},${nearestScreen.bounds.width},${nearestScreen.bounds.height}] scaleFactor=${nearestScreen.scaleFactor}`,
+    );
     win.setAlwaysOnTop(true, "screen-saver");
     win.show();
     win.focus();
     console.log(
-        `[SCREENSHOT_WINDOW_SHOW] requestId=${requestId || "unknown"} bounds=[${win.getBounds().x},${win.getBounds().y},${win.getBounds().width},${win.getBounds().height}], isVisible=${win.isVisible()}, isAlwaysOnTop=${win.isAlwaysOnTop()}`,
+        `[CLIP_WINDOW_SHOW] requestId=${requestId || "unknown"} bounds=[${win.getBounds().x},${win.getBounds().y},${win.getBounds().width},${win.getBounds().height}], isVisible=${win.isVisible()}, isAlwaysOnTop=${win.isAlwaysOnTop()}`,
     );
+    console.log(`[OVERLAY_VISIBLE] requestId=${requestId || "unknown"}`);
 }
 
 async function sendCaptureEvent(
@@ -1300,10 +1410,18 @@ async function sendCaptureEvent(
     type?: 功能,
     requestId = "req-default",
 ) {
-    console.log(`[SCREENSHOT_WINDOW_CREATE] requestId=${requestId}`);
+    console.log(`[CLIP_WINDOW_CREATE] requestId=${requestId}`);
+
+    // The overlay must be visible before its renderer receives the image. Its
+    // canvas starts transparent, so users never see an uninitialised frame.
+    await fullScreen(requestId);
+
     const win = await getClipWin();
     console.log(
-        `[SCREENSHOT_WINDOW_READY] requestId=${requestId} clipWindowLoaded=${clipWindowLoaded}, isVisible=${win?.isVisible()}`,
+        `[CLIP_INIT] requestId=${requestId} clipWindowLoaded=${clipWindowLoaded}, isVisible=${win?.isVisible()}`,
+    );
+    console.log(
+        `[CLIP_IMAGE_INJECT] requestId=${requestId} bufferLength=${data?.length || 0}`,
     );
     mainSend(win?.webContents, "clip_init", [
         screen.getAllDisplays(),
@@ -1312,16 +1430,6 @@ async function sendCaptureEvent(
         type,
         requestId,
     ]);
-
-    // 超时保底展示（避免渲染进程某些情况未发送 clip_show 导致窗口永远隐藏）
-    setTimeout(() => {
-        if (win && !win.isDestroyed() && !win.isVisible()) {
-            console.log(
-                `[SCREENSHOT_FALLBACK_SHOW] requestId=${requestId} clip_show event timeout, forcing fullScreen()`,
-            );
-            fullScreen(requestId);
-        }
-    }, 1500);
 }
 
 /** 关闭或隐藏截屏 */
@@ -1482,7 +1590,14 @@ mainOn("hotkey", ([type, name, key]) => {
             let ok = false;
             if (key) {
                 ok = globalShortcut.register(key, () => {
-                    快捷键函数[name]();
+                    if (name === "截屏搜索") {
+                        console.log(
+                            `[REAL_ALT_C_KEYDOWN] ${new Date().toISOString()}`,
+                        );
+                        startScreenshot(undefined, "global-shortcut");
+                    } else {
+                        快捷键函数[name]();
+                    }
                 });
             }
             return key ? ok : true;
@@ -1774,6 +1889,22 @@ async function createMainWindow(op: MainWinType) {
             });
     });
 
+    mainWindow.on("minimize", () => {
+        console.log("[MAIN_WINDOW_MINIMIZE]");
+    });
+
+    mainWindow.on("restore", () => {
+        console.log("[MAIN_WINDOW_RESTORE]");
+    });
+
+    mainWindow.on("hide", () => {
+        console.log("[MAIN_WINDOW_HIDE]");
+    });
+
+    mainWindow.on("show", () => {
+        console.log("[MAIN_WINDOW_SHOW]");
+    });
+
     mainWindow.on("close", () => {
         store.set("主页面大小", [
             mainWindow.getNormalBounds().width,
@@ -1802,6 +1933,36 @@ async function createMainWindow(op: MainWinType) {
     return windowName;
 }
 
+/** 从托盘安全切换主窗口显示状态（绝不触发截屏） */
+function toggleMainWindowFromTray() {
+    const winKeys = Object.keys(mainWindowL);
+    if (winKeys.length === 0) {
+        createMainWindow({ type: "text", content: "" });
+        return;
+    }
+    const latestId = Math.max(...winKeys.map((i) => Number(i)));
+    const targetWin = mainWindowL[latestId]?.win;
+    if (!targetWin || targetWin.isDestroyed()) {
+        delete mainWindowL[latestId];
+        createMainWindow({ type: "text", content: "" });
+        return;
+    }
+
+    if (targetWin.isMinimized()) {
+        targetWin.restore();
+        targetWin.focus();
+    } else if (targetWin.isVisible()) {
+        if (targetWin.isFocused()) {
+            targetWin.hide();
+        } else {
+            targetWin.focus();
+        }
+    } else {
+        targetWin.show();
+        targetWin.focus();
+    }
+}
+
 let settingWindow: BrowserWindow | null = null;
 
 async function createSettingWindow() {
@@ -1828,9 +1989,7 @@ async function createSettingWindow() {
 }
 
 async function createHelpWindow() {
-    shell.openExternal(
-        `https://github.com/xushengfeng/eSearch/blob/${app.getVersion()}/docs/use/readme.md`,
-    );
+    shell.openExternal("https://screenx.jacobscy.xyz/#usage");
 }
 
 const searchWindowL: { [n: number]: WebContentsView } = {};
@@ -2675,7 +2834,7 @@ function checkUpdate(s手动检查?: boolean) {
 function showVersion(arg?: { v: string; url: string } | "err") {
     let title = "";
     let b = "";
-    let url = "https://github.com/xushengfeng/eSearch/releases";
+    let url = "https://screenx.jacobscy.xyz/release";
     if (arg) {
         if (arg === "err") {
             title = t("无法检查更新");

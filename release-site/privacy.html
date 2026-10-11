@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隐私与数据处理说明 - ScreenX</title>
+    <meta name="description" content="ScreenX 隐私政策与数据处理透明度说明：了解 ScreenX 如何在本地处理截图与离线 OCR，以及搜索、翻译等网络服务的交互边界。">
+    <meta name="keywords" content="ScreenX, 隐私政策, 数据安全, 本地OCR, 离线截图, 开源透明">
+    <link rel="canonical" href="https://screenx.jacobscy.xyz/privacy.html">
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192x192.png">
+    <link rel="shortcut icon" href="assets/favicon.ico">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Open Graph -->
+    <meta property="og:title" content="ScreenX 隐私与数据处理透明说明">
+    <meta property="og:description" content="透明、客观了解 ScreenX 本地处理架构与网络交互边界。绝无商业追踪，代码完全公开。">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://screenx.jacobscy.xyz/privacy.html">
+    <meta property="og:image" content="https://screenx.jacobscy.xyz/assets/ScreenX-og.png">
+</head>
+<body>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <header class="site-header">
+        <div class="container nav-container">
+            <a href="/" class="brand">
+                <img src="assets/logo.svg" alt="ScreenX Logo" class="brand-logo" width="36" height="36">
+                <span class="brand-name">ScreenX</span>
+                <span class="version-tag">v1.0.0</span>
+            </a>
+            <nav class="nav-menu">
+                <a href="/" class="nav-link">返回首页</a>
+                <a href="/#features" class="nav-link">功能特性</a>
+                <a href="/release.html" class="nav-link">版本发布</a>
+                <a href="/#faq" class="nav-link">常见问题</a>
+            </nav>
+            <div class="nav-actions">
+                <a href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-Setup-1.0.0.exe" class="btn btn-sm btn-primary">下载安装包</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-header">
+            <div class="badge-pill">
+                <span class="badge-dot"></span>
+                <span>Privacy & Transparency · 隐私与透明度</span>
+            </div>
+            <h1 class="page-title">隐私与数据处理说明</h1>
+            <p class="page-subtitle">客观、透明地向您说明 ScreenX 的数据处理机制、本地化架构与网络服务边界。</p>
+        </div>
+
+        <article class="article-content">
+            <h2>一、核心原则：默认本地处理</h2>
+            <p>
+                ScreenX 坚持以<strong>本地设备优先</strong>为核心设计理念。作为一款桌面工具，我们充分尊重并保护您的个人隐私与数据安全。
+            </p>
+            <ul>
+                <li><strong>截图采集：</strong> 截图操作通过 Windows 原生物理图形接口在您的本地内存中完成，不会在未经您明确操作的情况下上传或传输到任何远程服务器。</li>
+                <li><strong>本地离线 OCR：</strong> 内置的文字识别算法基于本地离线神经网络模型（PaddleOCR ONNX）在您的计算机本地 CPU/GPU 运行推理。识别全过程完全在本地闭环，断网状态下亦可正常使用。</li>
+                <li><strong>临时图片缓存：</strong> 截取及编辑中的图像文件仅保存在本地内存或系统标准临时目录中，不会备份或同步至外部云端。</li>
+            </ul>
+
+            <h2>二、客观界定：哪些场景会产生网络通信？</h2>
+            <p>
+                我们不作“绝对不产生任何网络流量”的虚假承诺，因为 ScreenX 包含部分需要与外部网络交互的辅助功能。当您主动使用以下功能时，会产生明确、可预期的网络通信：
+            </p>
+            <div class="specs-box" style="margin: 20px 0;">
+                <ul class="specs-list">
+                    <li>
+                        <strong>聚合搜索服务：</strong> 当您在选区后点击“搜索”或在识别结果中触发外部搜索时，软件将调用您的 Windows 默认浏览器打开对应搜索引擎网址（例如百度、Bing、Google 等）。搜索请求由对应搜索引擎根据其自身隐私政策处理。
+                    </li>
+                    <li>
+                        <strong>在线翻译服务：</strong> 当您使用屏幕翻译或划词翻译功能时，若选用了在线翻译引擎（如百度翻译、DeepL、Google 翻译等），待翻译文本将发送至您所选定的第三方翻译服务商接口。
+                    </li>
+                    <li>
+                        <strong>安装包与元数据下载：</strong> 本网站页面访问、最新版本信息获取（<code>latest.json</code>）以及安装包文件分发托管于 Cloudflare Pages 与 Cloudflare R2，网络传输遵从标准 CDN 日志与安全策略。
+                    </li>
+                </ul>
+            </div>
+
+            <h2>三、本地配置与持久化存储</h2>
+            <p>
+                ScreenX 的偏好设置（如快捷键配置、界面语言、窗口位置偏好等）以纯文本 JSON 格式安全保存在您的本地用户目录中：
+            </p>
+            <ul>
+                <li>标准存储路径：<code>%APPDATA%\screenx</code>（安装版）或程序所在目录（绿色版数据隔离模式）。</li>
+                <li>软件不提供亦不强制要求任何用户账号体系，不记录用户身份标识。</li>
+            </ul>
+
+            <h2>四、无跟踪器与无广告承诺</h2>
+            <p>
+                ScreenX 恪守开源纯粹体验：
+            </p>
+            <ul>
+                <li>绝无任何形式的第三方商业广告 SDK 或推广插件；</li>
+                <li>绝无 Google Analytics、友盟、百度统计等隐蔽用户行为画像或遥测探针；</li>
+                <li>绝不擅自扫描您的硬盘文件、注册表隐私信息或后台监听麦克风、摄像头。</li>
+            </ul>
+
+            <h2>五、开放审计与 GPL-3.0 源代码</h2>
+            <p>
+                作为遵循 <strong>GNU General Public License v3.0 (GPL-3.0)</strong> 的自由开源软件，ScreenX 的全部源代码均已公开开放。任何用户或安全研究人员均可自由审查项目源码中的网络请求、数据存储及调用逻辑，确保代码行为与本说明完全一致。
+            </p>
+            <div class="license-callout">
+                ScreenX is a modified work based on eSearch under GNU GPL v3.0.<br>
+                如对数据处理有任何疑问，您可随时在发布站下载当前版本对应源码包（<a href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-1.0.0-source.zip" class="link" target="_blank" rel="noopener noreferrer">Source ZIP</a>）核验代码。
+            </div>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-container">
+            <div class="footer-left">
+                <div class="footer-brand">
+                    <img src="assets/logo.svg" alt="ScreenX Logo" width="24" height="24">
+                    <span>ScreenX</span>
+                </div>
+                <p class="footer-copy">
+                    &copy; 2026 ScreenX Contributors · Based on eSearch under GPL-3.0 License.
+                </p>
+            </div>
+            <div class="footer-right">
+                <a href="/" class="footer-link">首页</a>
+                <a href="/release.html" class="footer-link">版本发布</a>
+                <a href="/privacy.html" class="footer-link">隐私说明</a>
+                <a href="https://nav.jacobscy.xyz" class="footer-link" target="_blank" rel="noopener noreferrer">个人主站</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

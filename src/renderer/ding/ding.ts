@@ -1,5 +1,4 @@
 // biome-ignore format:
-import { writeImage } from "../lib/clipboard";
 const fs = require("node:fs") as typeof import("fs");
 import {
     type ElType,
@@ -122,6 +121,7 @@ const setNewDing = (
             width: "100%",
             alignItems: "center",
             userSelect: "none",
+            borderRadius: "14px",
         })
         .class(Class.glassBar)
         .class(toolBarIClass)
@@ -506,9 +506,18 @@ function getUrl(id: string) {
 }
 async function copy(id: string) {
     const url = getUrl(id);
+    // 贴图窗口从不获得键盘焦点，navigator.clipboard.write 必然失败，
+    // 改用 Electron 原生剪贴板 API（与截图窗口一致，不受焦点限制）。
+    // biome-ignore format: 保持单行，防止 import() 换行产生尾逗号语法错误
+    const { clipboard, nativeImage } = require("electron") as typeof import("electron");
+    if (url.startsWith("data:")) {
+        clipboard.writeImage(nativeImage.createFromDataURL(url));
+        return;
+    }
     const response = await fetch(url);
     const blob = await response.blob();
-    await writeImage(blob);
+    const buf = Buffer.from(await blob.arrayBuffer());
+    clipboard.writeImage(nativeImage.createFromBuffer(buf));
 }
 function save(id: string) {
     const b = Buffer.from(
@@ -990,7 +999,10 @@ addStyle({
 const photoEl = view().style({ width: "100%", height: "100%" }).addInto();
 
 const dingPhotoClass = addClass(
-    {},
+    {
+        borderRadius: "12px",
+        boxShadow: "var(--shadow-sm)",
+    },
     {
         "&:hover": {
             boxShadow: "var(--shadow)",
@@ -1000,7 +1012,10 @@ const dingPhotoClass = addClass(
         },
     },
 );
-const dingPhotoHightClass = addClass({ boxShadow: "var(--shadow)" }, {});
+const dingPhotoHightClass = addClass(
+    { boxShadow: "var(--shadow)", borderRadius: "12px" },
+    {},
+);
 
 const minimizeClass = addClass(
     {
@@ -1016,6 +1031,12 @@ const toolBarButtonsClass = addClass(
     {
         "&>button": {
             height: "32px",
+            borderRadius: "9px",
+            transition:
+                "background-color var(--transition-fast), transform var(--transition-fast)",
+        },
+        "&>button:hover": {
+            backgroundColor: "var(--bar-hover-color)",
         },
     },
 );

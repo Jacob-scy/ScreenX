@@ -1,7 +1,8 @@
 {
-    "name": "screenshot",
-    "version": "15.4.2",
-    "description": "Screenshot Personal Edition - 极简桌面截图工具",
+    "name": "screenx",
+    "productName": "ScreenX",
+    "version": "1.0.0",
+    "description": "ScreenX - 轻量级 Windows 截图与桌面效率工具",
     "main": "./out/main/main.js",
     "scripts": {
         "pack": "npm run build && electron-builder --dir -c electron-builder.config.js",
@@ -17,13 +18,17 @@
         "lint": "npx biome check src/",
         "fix": "biome check --write src/",
         "test": "vitest run",
-        "diagnose:screenshot": "electron scripts/diagnose_screenshot.js"
+        "diagnose:screenshot": "electron scripts/diagnose_screenshot.js",
+        "build:release": "node scripts/build-release.js",
+        "deploy:site": "node scripts/deploy-site.js",
+        "publish:r2": "node scripts/publish-r2.js",
+        "release": "pnpm run build:release && pnpm run publish:r2 && pnpm run deploy:site"
     },
     "author": {
-        "name": "xsf",
-        "email": "xushengfeng_zg@163.com"
+        "name": "ScreenX Contributors",
+        "url": "https://screenx.jacobscy.xyz"
     },
-    "homepage": "https://github.com/xushengfeng/eSearch/",
+    "homepage": "https://screenx.jacobscy.xyz",
     "license": "GPL-3.0",
     "packageManager": "pnpm@10.17.0",
     "dependencies": {
@@ -72,6 +77,7 @@
         "vite-bundle-analyzer": "^1.2.0",
         "vite-plugin-image-optimizer": "^1.1.8",
         "vitest": "^4.1.10",
+        "wrangler": "4.135.0",
         "xtimelog": "^1.0.5"
     },
     "optionalDependencies": {

@@ -1,7 +1,7 @@
-# eSearch 项目指南
+# ScreenX 项目指南
 
 ## 项目概述
-eSearch 是一个基于 Electron 的跨平台桌面应用，提供截屏、OCR、搜索、翻译、贴图、屏幕翻译、以图搜图、滚动截屏、录屏等功能。
+ScreenX 是一个专为 Windows 10/11 设计的现代化桌面截图与效率利器，提供截图、本地离线 OCR、搜索、翻译、贴图与全方向长截图等核心能力。项目基于开源上游 eSearch 修改演进，遵循 GNU General Public License v3.0 (GPL-3.0)。
 
 ## 技术栈
 - **框架**: Electron + electron-vite

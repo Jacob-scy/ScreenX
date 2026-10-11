@@ -1458,7 +1458,7 @@ const xs: Record<
                     view().add([
                         "临时目录：",
                         " ",
-                        pathEl(path.join(os.tmpdir(), "eSearch")),
+                        pathEl(path.join(os.tmpdir(), "ScreenX")),
                     ]),
                     view().add(["运行目录：", " ", pathEl(runPath)]),
                 ]);
@@ -3974,116 +3974,30 @@ function about() {
             const yy = (e.offsetY / el.el.offsetWidth - 0.5) * -2;
             el.style({ "--x": `${xx * 8}px`, "--y": `${yy * 8}px` });
         });
-    const nameEl = p(packageJson.name, true).style({ fontSize: "2rem" });
-    const version = button(noI18n(packageJson.version))
-        .attr({ title: "点击检查更新" })
-        .class(Class.mono, Class.click)
-        .on("click", () => {
-            fetch(githubUrl("repos/xushengfeng/eSearch/releases", "api"), {
-                method: "GET",
-                redirect: "follow",
-            })
-                .then((response) => response.json())
-                .then((re) => {
-                    console.log(re);
-                    const l: {
-                        html_url: string;
-                        name: string;
-                        body: string;
-                        assets: {
-                            browser_download_url: string;
-                            name: string;
-                        }[];
-                    }[] =
-                        // @ts-expect-error
-                        re.filter((i) => !i.draft);
-                    update.clear();
-                    for (const [i, r] of l.entries()) {
-                        const div = xGroup("y");
-                        const tags = xGroup("x").style({
-                            alignItems: "center",
-                        });
-                        const b = r.body.split("\n---").at(0) as string;
-                        const p = document.createElement("p");
-                        p.innerHTML = b.replace(/\r\n/g, "<br>");
-                        function md(b: string) {
-                            fetch(githubUrl("markdown", "api"), {
-                                body: JSON.stringify({ text: b, mode: "gfm" }),
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                            })
-                                .then((r) => r.text())
-                                .then((data) => {
-                                    p.innerHTML = data;
-                                });
-                        }
-                        md(b);
-                        const trans = button("翻译").on("click", async () => {
-                            const transE = getSet("翻译.翻译器");
-                            if (transE.length === 0) {
-                                trans.remove();
-                                return;
-                            }
-                            // biome-ignore format:
-                            const x = transE.at(0) as setting["翻译"]["翻译器"][0];
-                            // @ts-ignore
-                            translator.e[x.type].setKeys(x.keys);
-                            // @ts-ignore
-                            const t = await translator.e[x.type].run(
-                                b,
-                                "zh",
-                                getSet("语言.语言"),
-                            );
-                            md(t);
-                        });
-                        div.add([
-                            ele("h1").add(noI18n(r.name)).style({
-                                fontFamily: "var(--monospace)",
-                            }),
-                            tags,
-                            getSet("语言.语言") !== "zh-HANS" ? trans : "",
-                            p,
-                        ]);
-                        update.add(div);
-
-                        if (r.name === packageJson.version) {
-                            tags.add(txt("当前版本"));
-                            break;
-                        }
-                        if (i === 0) {
-                            tags.add(txt("最新版本"));
-                        }
-                        const baseName = `eSearch-${r.name}-${process.platform}-${process.arch}`;
-                        const assets = r.assets.filter((i) =>
-                            i.name.startsWith(baseName),
-                        );
-                        tags.add(
-                            assets.map((i) =>
-                                button(
-                                    noI18n(
-                                        `${t("点击下载")} ${i.name.replace(baseName, "")}`,
-                                    ),
-                                ).on("click", () => {
-                                    shell.openExternal(
-                                        githubUrl(i.browser_download_url),
-                                    );
-                                }),
-                            ),
-                        );
-                        tags.add(
-                            button("忽略此版本").on("click", () => {
-                                setSet("更新.忽略版本", r.name);
-                                reRenderSetting("更新.忽略版本");
-                            }),
-                        );
-                    }
-                })
-                .catch((error) => console.log("error", error));
-        });
+    const nameEl = p("ScreenX", true).style({
+        fontSize: "2rem",
+        fontWeight: "bold",
+    });
+    const subtitleEl = p("轻量级 Windows 桌面截图与效率工具").style({
+        color: "var(--text-color-secondary, #888)",
+        marginBottom: "8px",
+    });
+    const featureEl = p(
+        "截图 · 离线 OCR · 搜索 · 翻译 · 贴图 · 滚动截图",
+    ).style({ fontSize: "0.95rem", marginBottom: "16px" });
+    const version = button(noI18n(`v${packageJson.version}`))
+        .attr({ title: "ScreenX 当前稳定版本" })
+        .class(Class.mono);
     const update = view("y").style({ gap: "16px" });
     const desc = p(packageJson.description);
 
-    const infoEl = view("y").style({ alignItems: "center" });
+    const infoEl = view("y").style({
+        alignItems: "center",
+        gap: "8px",
+        marginTop: "16px",
+        maxWidth: "600px",
+        textAlign: "center",
+    });
 
     infoEl.add([
         view().add([
@@ -4091,44 +4005,56 @@ function about() {
             " ",
             a(packageJson.homepage).add(noI18n(packageJson.homepage)),
         ]),
-        view().add([
-            "支持该项目：",
-            " ",
-            a(packageJson.homepage).add("为项目点亮星标🌟"),
-            " ",
-            a("https://github.com/xushengfeng").add("赞赏"),
-        ]),
-        view().add([
-            a(renderSendSync("feedbackBug", [])).add("反馈问题"),
-            " ",
-            a(
-                renderSendSync("feedbackFeature", [
-                    { title: "建议在……添加……功能/改进" },
-                ]),
-            ).add("提供建议"),
-            " ",
-            txt("QQ:1057170038"),
-        ]),
-        view().add(
-            a(
-                "https://github.com/xushengfeng/eSearch/tree/master/lib/translate",
-            ).add("改进翻译"),
-        ),
-        view().add([
-            "本软件遵循",
-            " ",
-            a("https://www.gnu.org/licenses/gpl-3.0.html").add(
-                noI18n(packageJson.license),
-            ),
-        ]),
         view().add(
             noI18n(
-                `Copyright © 2021-${new Date().getFullYear()} ${packageJson.author.name} ${packageJson.author.email}`,
+                "Copyright © 2026 ScreenX Contributors. All rights reserved.",
             ),
         ),
+        view().style({
+            width: "100%",
+            height: "1px",
+            background: "var(--border-color, #ccc)",
+            margin: "12px 0",
+        }),
+        view("y")
+            .style({ alignItems: "center", gap: "4px" })
+            .add([
+                p("开源许可与衍生声明 (Open Source Licenses)").style({
+                    fontWeight: "bold",
+                }),
+                p("ScreenX is a modified work based on eSearch."),
+                view().add([
+                    "Original Project: ",
+                    a("https://github.com/xushengfeng/eSearch").add(
+                        noI18n("https://github.com/xushengfeng/eSearch"),
+                    ),
+                ]),
+                p("Original Copyright: Copyright © xushengfeng"),
+                view().add([
+                    "License: ",
+                    a("https://www.gnu.org/licenses/gpl-3.0.html").add(
+                        noI18n("GNU General Public License v3.0"),
+                    ),
+                ]),
+                p(
+                    "Third-Party Libraries: Electron, Biome, ONNX Runtime, FastText WASM, etc.",
+                ).style({
+                    fontSize: "0.85rem",
+                    color: "var(--text-color-secondary, #888)",
+                }),
+            ]),
     ]);
 
-    return el.add([logoEl, nameEl, version, update, desc, infoEl]);
+    return el.add([
+        logoEl,
+        nameEl,
+        subtitleEl,
+        featureEl,
+        version,
+        update,
+        desc,
+        infoEl,
+    ]);
 }
 
 setTranslate((text) => t(text));

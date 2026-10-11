@@ -128,16 +128,14 @@ const beforePack = async () => {
  * @type import("electron-builder").Configuration
  */
 const build = {
-    productName: "Screenshot",
-    appId: "com.screenshot.app",
-    executableName: "screenshot",
+    productName: "ScreenX",
+    appId: "com.personal.screenx",
+    executableName: "ScreenX",
     directories: {
         output: "build",
     },
     icon: "./assets/logo",
-    electronDownload: {
-        mirror: "https://npmmirror.com/mirrors/electron/",
-    },
+    electronDist: path.resolve(__dirname, "node_modules/electron/dist"),
     npmRebuild: false,
     fileAssociations: [
         {
@@ -157,7 +155,7 @@ const build = {
         },
     ],
     asar: false,
-    artifactName: `\${productName}-\${version}-\${platform}-${arch}.\${ext}`,
+    artifactName: `\${productName}-\${version}-\${platform}.\${ext}`,
     beforePack: beforePack,
     linux: {
         category: "Utility",
@@ -205,7 +203,7 @@ const build = {
         writeUpdateInfo: false,
     },
     win: {
-        icon: "./assets/logo/icon.ico",
+        icon: "./assets/branding/ScreenX.ico",
         target: [
             {
                 target: "nsis",
@@ -217,19 +215,32 @@ const build = {
             },
         ],
         files: [
+            "!release/**",
+            "!upload_to_r2/**",
+            "!build/**",
+            "!temp/**",
+            "!scripts/**",
+            "!docs/**",
+            "!*.zip",
+            "!*.exe",
             "!lib/gtk-open-with",
             "!lib/kde-open-with",
             "!assets/logo/icon.icns",
             "!assets/logo/1024x1024.png",
             "!assets/logo/512x512.png",
-            "!node_modules/onnxruntime-node/bin/napi-v3/linux",
-            "!node_modules/onnxruntime-node/bin/napi-v3/darwin",
+            "!node_modules/onnxruntime-node/bin/**/linux",
+            "!node_modules/onnxruntime-node/bin/**/darwin",
         ],
     },
     nsis: {
         oneClick: false,
         allowToChangeInstallationDirectory: true,
         differentialPackage: false,
+        artifactName: "${productName}-Setup-${version}.${ext}",
+        installerIcon: "./assets/branding/ScreenX.ico",
+        uninstallerIcon: "./assets/branding/ScreenX.ico",
+        installerHeaderIcon: "./assets/branding/ScreenX.ico",
+        shortcutName: "ScreenX",
     },
     afterPack: async (c) => {
         const localsPath = path.join(c.appOutDir, "locales");

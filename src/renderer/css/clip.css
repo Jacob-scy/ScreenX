@@ -29,9 +29,11 @@ body {
     pointer-events: none;
     opacity: 0;
     transition: var(--transition);
-    padding: 2px;
-    border-radius: var(--border-radius);
+    padding: 4px;
+    border-radius: 16px;
     box-shadow: var(--shadow);
+    background-color: var(--bar-bg);
+    backdrop-filter: var(--blur);
 }
 #center_bar > div {
     overflow: hidden;
@@ -44,14 +46,16 @@ body {
 #save_type > div:nth-child(1) {
     text-align: center;
     line-height: 2rem;
-    border-radius: 6px;
+    border-radius: 10px;
     transition: var(--transition);
 }
 #save_type > #suffix > div:hover {
-    background-color: var(--hover-color);
+    background-color: var(--bar-hover-color);
 }
 .suffix_h {
-    background-color: var(--bar-focus-color);
+    background-color: var(--accent-soft);
+    box-shadow: inset 0 0 0 1px
+        color-mix(in srgb, var(--accent-color) 40%, transparent);
 }
 /* 快捷键 */
 #hotkeys_tip {
@@ -100,16 +104,17 @@ body input {
     z-index: 99;
     left: 10px;
     top: 100px;
-    border-radius: calc(var(--bar-size) / 6);
+    border-radius: 20px;
     overflow: hidden;
-    transition: opacity var(--transition);
+    transition: opacity var(--transition), box-shadow var(--transition);
     box-shadow: var(--shadow);
 }
 #tool_bar > div {
     width: var(--bar-size);
     height: var(--bar-size);
-    border-radius: calc(var(--bar-size) / 6);
-    transition: var(--transition);
+    border-radius: 14px;
+    transition: background-color var(--transition-fast), transform
+        var(--transition-fast);
     cursor: pointer;
     position: relative;
     &:active {
@@ -118,10 +123,19 @@ body input {
 }
 #tool_bar > div > .icon {
     width: calc(var(--bar-size) * var(--bar-icon));
+    transition: transform var(--transition-fast);
 }
 #tool_bar > div:hover {
-    background-color: var(--hover-color);
-    transition: var(--transition);
+    background-color: var(--bar-hover-color);
+    transition: background-color var(--transition-fast);
+}
+#tool_bar > div:hover > .icon {
+    transform: scale(1.12);
+}
+/* 工具栏分隔线（竖排） */
+#tool_bar > div + div {
+    box-shadow: inset 0 1px 0 0
+        color-mix(in srgb, var(--font-color) 8%, transparent);
 }
 
 #tool_screens {
@@ -200,7 +214,9 @@ body input {
 
 /* 画 */
 .select {
-    background-color: var(--bar-focus-color) !important;
+    background-color: var(--accent-soft) !important;
+    box-shadow: inset 0 0 0 1px
+        color-mix(in srgb, var(--accent-color) 40%, transparent) !important;
 }
 #draw_bar {
     left: 80px;
@@ -213,15 +229,16 @@ body input {
 }
 #draw_bar > div {
     width: var(--bar-size);
-    border-radius: calc(var(--bar-size) / 6);
+    border-radius: 20px;
     box-shadow: var(--shadow);
 }
 #draw_main > div,
 .draw_items > div {
     width: var(--bar-size);
     height: var(--bar-size);
-    border-radius: calc(var(--bar-size) / 6);
-    transition: var(--transition);
+    border-radius: 14px;
+    transition: background-color var(--transition-fast), transform
+        var(--transition-fast);
     &:not(:has(.range-b)):active {
         transform: var(--button-active);
     }
@@ -229,11 +246,16 @@ body input {
 #draw_main > div > .icon,
 .draw_items > div > .icon {
     width: calc(var(--bar-size) * var(--bar-icon));
+    transition: transform var(--transition-fast);
 }
 #draw_main > div:not(:has(.range-b)):hover,
 .draw_items > div:not(:has(.range-b)):hover {
-    background-color: var(--hover-color);
-    transition: var(--transition);
+    background-color: var(--bar-hover-color);
+    transition: background-color var(--transition-fast);
+}
+#draw_main > div:not(:has(.range-b)):hover > .icon,
+.draw_items > div:not(:has(.range-b)):hover > .icon {
+    transform: scale(1.1);
 }
 #draw_side {
     position: absolute;
@@ -288,13 +310,15 @@ body input {
     align-items: center;
     position: fixed;
     z-index: 100;
-    padding: 2px;
-    border-radius: var(--border-radius);
+    padding: 4px;
+    border-radius: 14px;
     box-shadow: var(--shadow);
     overflow: hidden;
     pointer-events: none;
     left: 0;
     top: 0;
+    background-color: var(--bar-bg);
+    backdrop-filter: var(--blur);
 }
 .mouse_bar_hide {
     transition: var(--transition);
@@ -305,7 +329,7 @@ body input {
     height: var(--color-size);
     overflow: hidden;
     transition: var(--transition);
-    border-radius: 6px;
+    border-radius: 10px;
     position: relative;
 }
 #point_color > canvas {
@@ -351,26 +375,29 @@ body input {
 #clip_copy > div > div:not(:nth-child(1)) > div {
     height: 32px;
     line-height: 32px;
-    transition: background-color var(--transition);
+    transition: background-color var(--transition-fast);
     text-align: center;
-    border-radius: 6px;
+    border-radius: 8px;
     white-space: nowrap;
 }
 #clip_copy > div > div:not(:nth-child(1)) {
-    border-radius: 6px;
+    border-radius: 8px;
 }
 #clip_xy:hover,
 #clip_copy > div > div:nth-child(1):hover,
 #clip_copy > div > div > div:hover {
-    background-color: var(--hover-color);
+    background-color: var(--bar-hover-color);
 }
 #clip_wh {
     position: absolute;
     z-index: 11;
-    border-radius: var(--border-radius);
+    border-radius: 12px;
     box-shadow: var(--shadow);
     display: flex;
     padding: var(--o-padding);
+    background-color: var(--bar-bg);
+    backdrop-filter: var(--blur);
+    border: 1px solid color-mix(in srgb, var(--font-color) 10%, transparent);
 }
 #clip_wh > div {
     font-family: var(--monospace);

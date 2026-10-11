@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScreenX - Windows 截图、OCR、搜索与翻译工具</title>
+    <meta name="description" content="ScreenX 是一款专为 Windows 10/11 设计的现代化桌面截图与效率利器，提供快捷截图、离线 OCR、聚合搜索、多源翻译、桌面贴图与全方向滚动截图能力。开源免费，遵循 GPL-3.0。">
+    <meta name="keywords" content="ScreenX, Windows截图, 桌面截图, 离线OCR, 屏幕翻译, 桌面贴图, 滚动截图, GPL-3.0">
+    <link rel="canonical" href="https://screenx.jacobscy.xyz/">
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192x192.png">
+    <link rel="shortcut icon" href="assets/favicon.ico">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="ScreenX - Windows 截图、OCR、搜索与翻译工具">
+    <meta property="og:description" content="专为 Windows 10/11 设计的轻量桌面效率工具，支持离线 OCR、划词翻译、智能贴图与全向长截图。遵循 GPL-3.0。">
+    <meta property="og:image" content="https://screenx.jacobscy.xyz/assets/ScreenX-og.png">
+    <meta property="og:url" content="https://screenx.jacobscy.xyz/">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ScreenX - Windows 截图、OCR、搜索与翻译工具">
+    <meta name="twitter:description" content="专为 Windows 10/11 设计的轻量桌面效率工具，支持离线 OCR、划词翻译、智能贴图与全向长截图。">
+    <meta name="twitter:image" content="https://screenx.jacobscy.xyz/assets/ScreenX-og.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <!-- 导航栏 -->
+    <header class="site-header">
+        <div class="container nav-container">
+            <a href="#" class="brand">
+                <img src="assets/logo.svg" alt="ScreenX Logo" class="brand-logo" width="36" height="36">
+                <span class="brand-name">ScreenX</span>
+                <span class="version-tag" id="nav-version-badge">v1.0.0</span>
+            </a>
+            <nav class="nav-menu">
+                <a href="#features" class="nav-link">功能特性</a>
+                <a href="#usage" class="nav-link">使用指南</a>
+                <a href="#install-guide" class="nav-link">安装与卸载</a>
+                <a href="#faq" class="nav-link">常见问题</a>
+                <a href="#specs" class="nav-link">系统要求</a>
+                <a href="/privacy.html" class="nav-link">隐私说明</a>
+                <a href="/release.html" class="nav-link">版本发布</a>
+            </nav>
+            <div class="nav-actions">
+                <a href="#download" class="btn btn-sm btn-primary">立即下载</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero 区域 -->
+        <section class="hero-section">
+            <div class="container hero-container">
+                <div class="badge-pill">
+                    <span class="badge-dot"></span>
+                    <span>正式公开版 v1.0.0 · 现已发布</span>
+                </div>
+                <h1 class="hero-title">
+                    轻量、纯粹、实用的<br>
+                    <span class="text-gradient">Windows 桌面效率利器</span>
+                </h1>
+                <p class="hero-subtitle">
+                    ScreenX 融合原生截图响应、本地离线 OCR、划词翻译、桌面贴图及全方向滚动截图，为您打造清爽无扰的桌面记录与文字提取工作流。
+                </p>
+
+                <div class="hero-badges">
+                    <span class="feature-tag">📸 原生截图</span>
+                    <span class="feature-tag">🔍 离线 OCR</span>
+                    <span class="feature-tag">🌐 聚合搜索</span>
+                    <span class="feature-tag">🈯 多源翻译</span>
+                    <span class="feature-tag">📌 桌面贴图</span>
+                    <span class="feature-tag">📜 全向长截图</span>
+                </div>
+
+                <!-- 明确区分的主次下载区域 -->
+                <div class="hero-cta-group" id="download">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%;">
+                        <a id="main-download-btn" href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-Setup-1.0.0.exe" class="btn btn-lg btn-primary btn-glow" target="_blank" rel="noopener noreferrer">
+                            <svg class="btn-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <span>下载 Windows 安装包 (64-bit)</span>
+                        </a>
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">
+                            推荐普通用户下载 · 带快捷方式与标准卸载向导 · 约 224 MB
+                        </span>
+                    </div>
+
+                    <div class="download-sublinks" style="margin-top: 10px;">
+                        <a id="portable-download-link" href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-1.0.0-win.zip" class="sublink" target="_blank" rel="noopener noreferrer">
+                            📦 绿色便携版 (.zip)
+                        </a>
+                        <span class="divider">·</span>
+                        <a id="source-download-link" href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-1.0.0-source.zip" class="sublink" target="_blank" rel="noopener noreferrer">
+                            💻 GPL-3.0 完整源码 (.zip)
+                        </a>
+                        <span class="divider">·</span>
+                        <a href="/release.html#checksum" class="sublink">
+                            🛡️ SHA-256 完整性校验
+                        </a>
+                    </div>
+                </div>
+
+                <div class="system-note">
+                    适配 Windows 10 / Windows 11 · x64 架构 · 无需另配运行库
+                </div>
+
+                <!-- 首次运行安全提示（客观透明） -->
+                <div class="callout-warning" style="max-width: 780px; margin: 32px auto 0; text-align: left;">
+                    <div class="callout-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <span>Windows 首次运行安全提示说明</span>
+                    </div>
+                    <div class="callout-text">
+                        Windows 对新发布、未建立长期信任或无昂贵企业代码签名的独立开源软件，可能会弹出 Microsoft Defender SmartScreen 提示（如「Windows 已保护你的电脑」）。<br>
+                        请务必核实下载文件来源于 ScreenX 官方渠道（<code>https://screenx.jacobscy.xyz/</code> 与 <code>https://download.jacobscy.xyz/</code>）。确认无误后，点击提示界面中的<strong>「更多信息」</strong>，随后点击<strong>「仍要运行」</strong>即可正常启动。请切勿从任何第三方未知网站下载软件。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 核心功能展示（客观准确描述） -->
+        <section class="section" id="features">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">FEATURES</span>
+                    <h2 class="section-title">全方位赋能您的桌面生产力</h2>
+                    <p class="section-desc">每一项设计都为实用而生，让日常记录与信息提取触手可及。</p>
+                </div>
+
+                <div class="grid grid-3">
+                    <div class="card feature-card">
+                        <div class="card-icon">🎯</div>
+                        <h3 class="card-title">原生截图体验</h3>
+                        <p class="card-text">基于 Win32 物理缓冲捕获技术，支持高 DPI 屏幕与多显示器环境，全局快捷键快速呼出，选区精准流畅。</p>
+                    </div>
+
+                    <div class="card feature-card">
+                        <div class="card-icon">🔍</div>
+                        <h3 class="card-title">离线本地 OCR</h3>
+                        <p class="card-text">内置 PaddleOCR ONNX 轻量模型，在本地 CPU 完成图像文字提取，无需将截图上传至云端服务器，断网亦可正常工作。</p>
+                    </div>
+
+                    <div class="card feature-card">
+                        <div class="card-icon">📌</div>
+                        <h3 class="card-title">灵动桌面贴图</h3>
+                        <p class="card-text">一键将截图固定悬浮在桌面最顶层，支持自由缩放与画笔、矩形、马赛克等标注工具，多文档比对更省心。</p>
+                    </div>
+
+                    <div class="card feature-card">
+                        <div class="card-icon">📜</div>
+                        <h3 class="card-title">全方向滚动长截图</h3>
+                        <p class="card-text">支持横向与纵向平滑滚动，通过特征重叠算法自动拼接长网页与聊天对话，告别手动拼图繁琐。</p>
+                    </div>
+
+                    <div class="card feature-card">
+                        <div class="card-icon">🌐</div>
+                        <h3 class="card-title">一键聚合搜索</h3>
+                        <p class="card-text">快速框选屏幕文字，一键调用系统默认浏览器使用常用搜索引擎检索，免去繁琐的手动复制粘贴。</p>
+                    </div>
+
+                    <div class="card feature-card">
+                        <div class="card-icon">🈯</div>
+                        <h3 class="card-title">快捷划词翻译</h3>
+                        <p class="card-text">支持快捷呼出翻译对照面板，支持按需配置多翻译源接口，方便中英双语及外文文献查阅。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 使用指南与快捷键 -->
+        <section class="section section-darker" id="usage">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">HOW TO USE</span>
+                    <h2 class="section-title">极其简单的使用方式</h2>
+                    <p class="section-desc">轻量后台常驻，随时通过标准热键呼出，丝滑融入日常习惯。</p>
+                </div>
+
+                <div class="grid grid-3">
+                    <div class="step-card">
+                        <div class="step-num">01</div>
+                        <h3 class="step-title">启动 ScreenX</h3>
+                        <p class="step-desc">双击运行程序，应用将安静常驻在 Windows 系统任务栏托盘中，随时待命。</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">02</div>
+                        <h3 class="step-title">呼出全局快捷键</h3>
+                        <p class="step-desc">在任意界面按下默认热键：<br><kbd class="key-badge">Alt</kbd> + <kbd class="key-badge">C</kbd><br>即可瞬间冻结屏幕并进入截图选区模式。</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">03</div>
+                        <h3 class="step-title">一键选取与处理</h3>
+                        <p class="step-desc">鼠标框选目标区域，快捷工具栏随之浮现：复制、保存、OCR 识别、屏幕翻译或贴图任你自由切换。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 安装与卸载指南 -->
+        <section class="section" id="install-guide">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">INSTALLATION & REMOVAL</span>
+                    <h2 class="section-title">安装与卸载指南</h2>
+                    <p class="section-desc">根据您的个人使用习惯，选择适合的形态版本。</p>
+                </div>
+
+                <div class="grid grid-2">
+                    <div class="card" style="padding: 32px;">
+                        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                            <span>💿</span> 标准安装包 (Setup Installer)
+                        </h3>
+                        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 16px;">
+                            推荐大多数日常桌面用户使用，提供完善的 Windows 系统集成体验。
+                        </p>
+                        <ul class="specs-list" style="margin-bottom: 20px;">
+                            <li><strong>安装步骤：</strong> 下载 <code>ScreenX-Setup-1.0.0.exe</code>，双击运行，跟随向导选择目标路径完成安装。</li>
+                            <li><strong>系统集成：</strong> 自动创建桌面与开始菜单快捷方式，支持托盘自动常驻。</li>
+                            <li><strong>标准卸载：</strong> 打开 Windows「设置」>「应用」>「安装的应用」，搜索「ScreenX」，点击「卸载」即可干净移除。</li>
+                        </ul>
+                    </div>
+
+                    <div class="card" style="padding: 32px;">
+                        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                            <span>📦</span> 绿色便携版 (Portable ZIP)
+                        </h3>
+                        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 16px;">
+                            适合免安装体验、企业内网临时使用或存放在 U 盘等移动存储设备。
+                        </p>
+                        <ul class="specs-list" style="margin-bottom: 20px;">
+                            <li><strong>使用步骤：</strong> 下载 <code>ScreenX-1.0.0-win.zip</code>，将其解压至任意本地文件夹。</li>
+                            <li><strong>即开即用：</strong> 打开解压目录，双击 <code>ScreenX.exe</code> 即可直接运行，无需写入安装注册表。</li>
+                            <li><strong>简易移除：</strong> 退出系统托盘中的 ScreenX，直接删除整个解压文件夹即可，不留系统冗余。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 常见问题 FAQ -->
+        <section class="section section-darker" id="faq">
+            <div class="container" style="max-width: 900px;">
+                <div class="section-header">
+                    <span class="section-label">FAQ</span>
+                    <h2 class="section-title">常见问题与解答</h2>
+                    <p class="section-desc">快速了解关于 ScreenX 的核心使用机制与技术细节。</p>
+                </div>
+
+                <div class="faq-list">
+                    <details class="faq-item" open>
+                        <summary class="faq-question">为什么需要 Windows 10 (1809+) 或 Windows 11 系统？</summary>
+                        <div class="faq-answer">
+                            ScreenX 的屏幕截取模块深度调用了 Windows 现代化物理缓冲区捕获接口（Win32 GDI Physical Buffer），以保障在高刷新率显示器及高 DPI 缩放场景下无黑屏、无撕裂截取。这些底层接口在 Windows 10 1809 及更高版本中具备最佳稳定性与系统支持。
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">截图内容会上传到云端服务器吗？</summary>
+                        <div class="faq-answer">
+                            不会。ScreenX 坚持本地设备优先原则。您截取的屏幕图像仅存在于本地内存和系统临时目录中，绝不会在后台自动上传或回传至任何远程云端。详细信息请参阅我们的<a href="/privacy.html" class="link">隐私说明</a>。
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">离线 OCR 文字识别是否需要连接互联网？</summary>
+                        <div class="faq-answer">
+                            完全不需要。ScreenX 内置了 PaddleOCR ONNX 轻量化神经网络模型，文字识别计算完全由您本地计算机的 CPU 完成推理，断网环境下依然可以正常识别中英文及标点。
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">如何修改默认截图全局快捷键（Alt + C）？</summary>
+                        <div class="faq-answer">
+                            右键点击 Windows 任务栏右下角通知区域的 ScreenX 托盘图标，在弹出菜单中点击「设置」，切换至快捷键选项卡即可自由修改截图呼出热键或为其他常用功能绑定快捷操作。
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">安装版与绿色便携版有什么区别？</summary>
+                        <div class="faq-answer">
+                            安装版（EXE）提供标准的向导安装、桌面和开始菜单图标注册以及 Windows 系统控制面板的卸载入口；绿色便携版（ZIP）解压即用，所有运行时数据可完全存放在独立目录中，方便放入 U 盘移动携带。两者的核心功能、性能与版本完全一致。
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">如何彻底卸载 ScreenX？</summary>
+                        <div class="faq-answer">
+                            若为安装版，请前往 Windows「设置」>「应用」>「安装的应用」，搜索「ScreenX」点击「卸载」并跟随向导移除即可；若为绿色便携版，只需在任务栏托盘中退出软件后，直接将程序解压文件夹移入回收站。
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">为什么首次运行时 Windows Defender SmartScreen 会提示安全警告？</summary>
+                        <div class="faq-answer">
+                            作为独立维护的自由开源项目，ScreenX 尚未购置商业企业级 EV 数字签名证书。Windows SmartScreen 在识别到新发布且尚未累积全网信誉的二进制程序时会默认弹出提示。只要您确认安装包下载自官方正版渠道（<code>https://screenx.jacobscy.xyz/</code> 与 <code>https://download.jacobscy.xyz/</code>），点击提示窗口中的「更多信息」，随后点击「仍要运行」即可正常启动。
+                        </div>
+                    </details>
+
+                    <details class="faq-item">
+                        <summary class="faq-question">源码在哪里下载？项目遵循什么开源许可？</summary>
+                        <div class="faq-answer">
+                            ScreenX 是遵循 <strong>GNU General Public License v3.0 (GPL-3.0)</strong> 的开源项目，基于原作者 xushengfeng 维护的开源项目 eSearch 进行演进。您可以在本站首页或版本发布页面直接下载与本版本完全对应的完整源代码归档包（<a href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-1.0.0-source.zip" class="link" target="_blank" rel="noopener noreferrer">Source ZIP</a>）。
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <!-- 系统要求与发布信息 -->
+        <section class="section" id="specs">
+            <div class="container">
+                <div class="specs-box">
+                    <div class="specs-grid">
+                        <div class="specs-col">
+                            <h3 class="specs-heading">系统要求</h3>
+                            <ul class="specs-list">
+                                <li><strong>操作系统：</strong> Windows 10 (1809 以上) / Windows 11</li>
+                                <li><strong>系统架构：</strong> 64位 (x64)</li>
+                                <li><strong>运行环境：</strong> 内置独立运行环境，无需另行安装 Node.js 或 .NET</li>
+                                <li><strong>磁盘空间：</strong> 建议预留 500 MB 可用存储空间</li>
+                            </ul>
+                        </div>
+                        <div class="specs-col">
+                            <h3 class="specs-heading">版本发布信息</h3>
+                            <ul class="specs-list">
+                                <li><strong>当前版本：</strong> <span class="highlight" id="spec-version">1.0.0 (正式公开版)</span></li>
+                                <li><strong>分发平台：</strong> Cloudflare R2 全球 CDN 高速加速</li>
+                                <li><strong>安装方式：</strong> 支持标准引导安装 (NSIS) 与免安装绿色解压版</li>
+                                <li><strong>发布渠道：</strong> 生产正式环境通过 <span class="code-pill">download.jacobscy.xyz</span> 分发</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 开源许可与合规声明 -->
+        <section class="section section-darker" id="license">
+            <div class="container">
+                <div class="license-box">
+                    <div class="license-header">
+                        <div class="license-badge">GPL-3.0 许可</div>
+                        <h2 class="license-title">开源与法律合规说明</h2>
+                    </div>
+                    <p class="license-text">
+                        ScreenX 是一款自由与开源软件（FOSS），遵循 <strong>GNU General Public License v3.0 (GPL-3.0)</strong>。
+                    </p>
+                    <div class="license-callout">
+                        <p><strong>原项目归属 (Original Project Attribution):</strong></p>
+                        <p>ScreenX is a modified work based on eSearch.</p>
+                        <p>Original Project: <a href="https://github.com/xushengfeng/eSearch" target="_blank" rel="noopener noreferrer" class="link">https://github.com/xushengfeng/eSearch</a></p>
+                        <p>Original Copyright: Copyright &copy; xushengfeng</p>
+                        <p>License: GNU General Public License v3.0</p>
+                    </div>
+                    <p class="license-details">
+                        根据 GPL-3.0 协议要求，本项目公开发行并分发对应的完整修改源码。您可以在本站直接下载已构建版本所对应的完整源代码归档包，或在遵守 GNU GPL v3.0 条款的前提下自由修改、学习和重新分发。
+                    </p>
+                    <div class="license-actions">
+                        <a href="https://download.jacobscy.xyz/screenx/v1.0.0/ScreenX-1.0.0-source.zip" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+                            📥 下载当前版本源码归档 (Source ZIP)
+                        </a>
+                        <a href="https://www.gnu.org/licenses/gpl-3.0.html" class="btn btn-outline" target="_blank" rel="noopener noreferrer">
+                            📄 查看 GNU GPL v3.0 全文
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="site-footer">
+        <div class="container footer-container">
+            <div class="footer-left">
+                <div class="footer-brand">
+                    <img src="assets/logo.svg" alt="ScreenX Logo" width="24" height="24">
+                    <span>ScreenX</span>
+                </div>
+                <p class="footer-copy">
+                    &copy; 2026 ScreenX Contributors · Based on eSearch under GPL-3.0 License.
+                </p>
+            </div>
+            <div class="footer-right">
+                <a href="#features" class="footer-link">特性</a>
+                <a href="#usage" class="footer-link">使用</a>
+                <a href="#install-guide" class="footer-link">安装</a>
+                <a href="#faq" class="footer-link">FAQ</a>
+                <a href="/privacy.html" class="footer-link">隐私说明</a>
+                <a href="/release.html" class="footer-link">版本发布</a>
+                <a href="https://nav.jacobscy.xyz" class="footer-link" target="_blank" rel="noopener noreferrer">个人主站</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
