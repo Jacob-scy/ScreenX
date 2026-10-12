@@ -107,7 +107,7 @@ screenx/
 - 运行 `pnpm run deploy:site`（或 `node scripts/deploy-site.js`）部署至 Cloudflare Pages。
 
 ### 步骤 10：更新个人导航门户 (Update Navigation)
-- 检查 `D:\ClaudeCodePj\Navigation`。
+- 检查 `D:\PersonalProjects\Navigation`。
 - 确认 `portal-frontend/app/stores/resource.ts` 中的 ScreenX 版本号与链接一致。
 
 ### 步骤 11：全量公网自测与验收 (Verification)

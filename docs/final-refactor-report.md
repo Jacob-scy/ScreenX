@@ -360,8 +360,8 @@ pnpm run diagnose:screenshot
 - Detected Displays: 1
   Display #0 (ID: 2525209314): Bounds [x:0, y:0, w:1707, h:960], ScaleFactor: 1.5
 [✅ PASS] STAGE_DISPLAY_DETECTION: Found 1 valid display(s)
-- Running Windows Native Capture Engine: D:\ClaudeCodePj\ScreenX\resources\bin\wincapture.exe
-  wincapture generated image files: D:\ClaudeCodePj\ScreenX\temp\diagnostics\screenshot-test.png & D:\ClaudeCodePj\ScreenX\temp\diagnostics\raw-screen.png (610026 bytes)
+- Running Windows Native Capture Engine: D:\PersonalProjects\ScreenX\resources\bin\wincapture.exe
+  wincapture generated image files: D:\PersonalProjects\ScreenX\temp\diagnostics\screenshot-test.png & D:\PersonalProjects\ScreenX\temp\diagnostics\raw-screen.png (610026 bytes)
 - Image Authenticity Metrics:
   Resolution: 2560x1440
   File Size: 610026 bytes
@@ -467,13 +467,13 @@ sequenceDiagram
 - OS: Windows_NT 10.0.26200 (x64)
 - Detected Displays: 1
   Display #0 (ID: 2525209314): Bounds [x:0, y:0, w:1707, h:960], ScaleFactor: 1.5
-- Running Windows Native Capture Engine: D:\ClaudeCodePj\ScreenX\resources\bin\wincapture.exe
+- Running Windows Native Capture Engine: D:\PersonalProjects\ScreenX\resources\bin\wincapture.exe
 [PASS] Native Capture: Real desktop captured: 2560x1440, 652156 bytes, 125 colors, 100% opaque
 [PASS] Overlay: Overlay visible, top-most, logical bounds [1708x960] matching display
 [PASS] Image Injection: Physical pixel size [2560x1440] mapped with scaleFactor 1.5 (zoom: 0.6667)
 [PASS] Mouse Selection: Logical rect [300,200,600,500] mapped to physical [450,300,900,750]
 [PASS] Physical Crop: Physical crop extracted: 900x750 pixels, 100% opaque
-[PASS] Save: Saved to D:\ClaudeCodePj\ScreenX\temp\diagnostics\crop-test.png (143108 bytes), verified and reloaded successfully
+[PASS] Save: Saved to D:\PersonalProjects\ScreenX\temp\diagnostics\crop-test.png (143108 bytes), verified and reloaded successfully
 [PASS] Clipboard: Image written to system clipboard, read back verified: 900x750
 ==================================================
 STAGE SUMMARY:
