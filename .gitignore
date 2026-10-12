@@ -25,6 +25,7 @@ scratch/
 
 release/
 *.bak
+*.bak-*
 *.p12
 *.pfx
 .wrangler/
