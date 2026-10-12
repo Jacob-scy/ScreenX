@@ -99,11 +99,11 @@ ScreenX 不经过任何 Linux 服务器，不污染 Linux 既有 Web 业务，�
 执行预设的一键构建脚本，该脚本自动处理高 DPI 原生捕获组件、打包、源码归档与元数据生成：
 
 ```powershell
-cd D:\PersonalProjects\ScreenX
+cd D:\PersonalProjects\projects\ScreenX
 pnpm run build:release
 ```
 
-- **输出路径**：`D:\PersonalProjects\ScreenX\release\`
+- **输出路径**：`D:\PersonalProjects\projects\ScreenX\release\`
 - **验证点**：检查目录中已生成 `ScreenX-Setup-1.0.0.exe`、`ScreenX-1.0.0-win.zip`、`ScreenX-1.0.0-source.zip` 以及 `latest.json`。
 
 ### 4.2 步骤二：Cloudflare CLI (Wrangler) 授权认证
@@ -161,7 +161,7 @@ Cloudflare Pages 部署完成后，需在控制台为项目关联正式公网域
 
 ### 4.7 步骤七：联动 Navigation 门户与生产验证
 
-在 `D:\PersonalProjects\Navigation\portal-frontend` 中注册 ScreenX 卡片条目：
+在 `D:\PersonalProjects\projects\Navigation\portal-frontend` 中注册 ScreenX 卡片条目：
 
 1. **资源配置**：在 `app/stores/resource.ts` 的 `Projects` 区域追加：
    ```typescript
@@ -189,7 +189,7 @@ Cloudflare Pages 部署完成后，需在控制台为项目关联正式公网域
    ```
 2. **构建验证**：
    ```powershell
-   cd D:\PersonalProjects\Navigation\portal-frontend
+   cd D:\PersonalProjects\projects\Navigation\portal-frontend
    pnpm run build
    ```
    确保 Nuxt Nitro 生产环境编译通过。
@@ -243,8 +243,8 @@ Cloudflare Pages 部署完成后，需在控制台为项目关联正式公网域
 ### Q7: GPL-3.0 法律合规与源码包自动化生成要求？
 - **现象**：基于 GPL-3.0 项目（eSearch）修改后公开分发二进制时，若无对应源码归档将构成许可违规。
 - **解决方案**：
-  1. 保留根目录 [`LICENSE`](file:///D:/PersonalProjects/ScreenX/LICENSE) 与原作者 `xushengfeng` 署名；
-  2. 建立规范的 [`NOTICE.md`](file:///D:/PersonalProjects/ScreenX/NOTICE.md) 说明主要演进变更；
+  1. 保留根目录 [`LICENSE`](file:///D:/PersonalProjects/projects/ScreenX/LICENSE) 与原作者 `xushengfeng` 署名；
+  2. 建立规范的 [`NOTICE.md`](file:///D:/PersonalProjects/projects/ScreenX/NOTICE.md) 说明主要演进变更；
   3. 构建脚本中通过 `archiver` 自动将 `src/`, `resources/`, `test/`, `package.json`, `NOTICE.md` 压缩生成 `ScreenX-x.y.z-source.zip`，并同安装包一并同步至 R2；
   4. 官网首页底部设立专属【开源与许可】区块，直连源码下载。
 
@@ -280,7 +280,7 @@ Cloudflare Pages 部署完成后，需在控制台为项目关联正式公网域
 # 编辑 package.json 中的 "version": "1.0.1"
 
 # 2. 执行全自动化发布流水线
-cd D:\PersonalProjects\ScreenX
+cd D:\PersonalProjects\projects\ScreenX
 pnpm run release
 
 # 3. 验证公网下载与版本元数据
