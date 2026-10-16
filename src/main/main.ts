@@ -59,6 +59,7 @@ import type {
     translateWinType,
     功能,
 } from "../ShareTypes";
+import { safeOpenExternal } from "./open-url";
 
 app.setName("ScreenX");
 
@@ -2160,7 +2161,7 @@ mainOn("tabView", ([id, arg], e) => {
 });
 
 mainOn("openUrl", ([url]) => {
-    shell.openExternal(url);
+    safeOpenExternal(url);
 });
 
 mainOn("tabViewSize", ([arg2], e) => {
