@@ -12,9 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 不指定 version：pnpm/action-setup 读取 package.json 的 packageManager 字段（pnpm@10.17.0）。
+      # 指定 version 会与 packageManager 冲突触发 ERR_PNPM_BAD_PM_VERSION（实测教训）。
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
