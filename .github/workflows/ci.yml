@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    name: Lint / Typecheck / Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # biome check：0 error 15 warning（门禁只看 error）
+      - name: Lint
+        run: pnpm lint
+
+      # tsc -b --force：三套 tsconfig 全量类型检查
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # vitest 27 用例（2026-09 基线）；注：现有用例为内联断言，
+      # 不 import src/（覆盖率 0）——补真实模块测试属阶段 2 事项。
+      - name: Unit tests
+        run: pnpm test
+
+# 注：tag 触发的打包发布在 build.yml（与上游 eSearch 一致的 6 平台矩阵），不在本文件。
