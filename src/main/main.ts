@@ -16,7 +16,6 @@ import {
     desktopCapturer,
     dialog,
     globalShortcut,
-    ipcMain,
     nativeImage,
     nativeTheme,
     screen,
@@ -28,7 +27,7 @@ import minimist from "minimist";
 
 import initScreenShots from "../renderer/screenShot/screenShot";
 
-import { exec, execSync } from "node:child_process";
+import { exec } from "node:child_process";
 import {
     cpSync,
     existsSync,
@@ -36,6 +35,7 @@ import {
     mkdirSync,
     readFile,
     readFileSync,
+    readdirSync,
     rmSync,
     statSync,
     writeFile,
@@ -46,7 +46,13 @@ import { dirname, join, resolve } from "node:path";
 import url from "node:url";
 import main, { matchFitLan } from "xtranslator";
 import { githubMirrorList } from "../../lib/github_mirror";
-import { mainOn, mainOnReflect, mainSend } from "../../lib/ipc";
+import {
+    mainOn,
+    mainOnReflect,
+    mainSend,
+    storeIpcArgsSchema,
+} from "../../lib/ipc";
+import type { SettingPath } from "../../lib/store/renderStore";
 import Store from "../../lib/store/store";
 import time_format from "../../lib/time_format";
 import { getLans, lan, t } from "../../lib/translate/translate";
@@ -59,7 +65,7 @@ import type {
     translateWinType,
     功能,
 } from "../ShareTypes";
-import { safeOpenExternal } from "./open-url";
+import { isSafeExternalUrl, safeOpenExternal } from "./open-url";
 
 app.setName("ScreenX");
 
@@ -94,19 +100,30 @@ const store = new Store({
     configPath: join(app.getPath("userData"), "config.json"),
 });
 
-ipcMain.on("store", (e, x) => {
-    if (x.type === "get") {
-        e.returnValue = store.get(x.path);
-    } else if (x.type === "set") {
-        store.set(x.path, x.value);
-    } else if (x.type === "path") {
-        e.returnValue = store.path();
-    } else if (x.type === "getAll") {
-        e.returnValue = store.getAll();
-    } else if (x.type === "setAll") {
-        store.setAll(x.value);
-    }
-});
+// store 通道原为裸 ipcMain.on("store")，config.json 可被任意来源全量读写；
+// 现收敛到单入口 "ipc"（isTrustedIpcSender 白名单）+ zod 参数校验。
+// 同步语义不变：mainOn 分发器会把非 undefined 返回值写入 event.returnValue。
+mainOn(
+    "store",
+    ([x]) => {
+        if (x.type === "get") {
+            return store.get(x.path as SettingPath);
+        }
+        if (x.type === "set") {
+            store.set(x.path as SettingPath, x.value);
+        }
+        if (x.type === "path") {
+            return store.path();
+        }
+        if (x.type === "getAll") {
+            return store.getAll();
+        }
+        if (x.type === "setAll") {
+            store.setAll(x.value);
+        }
+    },
+    storeIpcArgsSchema,
+);
 
 let /** 是否开启开发模式 */ dev: boolean;
 // 自动开启开发者模式
@@ -1538,12 +1555,17 @@ mainOn("move_user_data", ([target]) => {
     const prePath = app.getPath("userData");
     mkdirSync(toPath, { recursive: true });
     try {
-        if (process.platform === "win32") {
-            execSync(`xcopy "${prePath}\\**" "${toPath}" /Y /s`);
-        } else {
-            execSync(`cp -r "${prePath}/**" "${toPath}"`);
+        // 原实现用 execSync 拼接 xcopy/cp 命令，target 来自渲染进程，
+        // 存在 shell 注入面；改为 node:fs 逐条目复制，完全去掉 shell
+        for (const entry of readdirSync(prePath)) {
+            cpSync(join(prePath, entry), join(toPath, entry), {
+                recursive: true,
+            });
         }
-    } catch (error) {}
+    } catch (error) {
+        // 原实现静默吞错，失败时渲染进程无任何感知
+        console.error("[move_user_data] 复制用户数据失败:", error);
+    }
     // todo 错误返回
 });
 mainOn("getAutoStart", () => {
@@ -2000,6 +2022,13 @@ mainOn("open_this_browser", ([window_name, url]) => {
 
 /** 创建浏览器页面 */
 async function createBrowser(windowName: number, url: string) {
+    // translate 分支加载本地 translate.html（file://），其余 URL 必须通过
+    // 外部 URL 协议白名单（http/https/mailto），阻断 file://、javascript: 等
+    // 被加载进内置浏览器视图的攻击面
+    if (!url.startsWith("translate") && !isSafeExternalUrl(url)) {
+        console.warn(`[open_this_browser] 已拦截不安全的 URL: ${url}`);
+        return null;
+    }
     console.log(url);
 
     if (!windowName)

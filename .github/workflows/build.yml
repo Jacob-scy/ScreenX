@@ -2,8 +2,8 @@ name: Build/release
 
 on:
   push:
-    tags:
-      - "*"
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   release:
@@ -47,5 +47,5 @@ jobs:
           draft: false
           prerelease: true
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        # 不再引用未配置的 secrets.ACCESS_TOKEN：softprops/action-gh-release
+        # 默认使用仓库自动提供的 ${{ github.token }}

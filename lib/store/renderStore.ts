@@ -1,4 +1,4 @@
-const { ipcRenderer } = require("electron");
+import { renderSend, renderSendSync } from "../ipc";
 import type { setting } from "../../src/ShareTypes"; // 使用类型映射和条件类型来解析路径
 
 type Join<K, P> = K extends string | number
@@ -27,19 +27,19 @@ type GetValue<T, P extends string> = P extends `${infer K}.${infer Rest}`
 
 const store = {
     get: <P extends SettingPath>(path: P): GetValue<setting, P> => {
-        return ipcRenderer.sendSync("store", { type: "get", path });
+        return renderSendSync("store", [{ type: "get", path }]);
     },
     set: <P extends SettingPath>(
         path: P,
         value: GetValue<setting, P> | (unknown & {}),
     ): void => {
-        ipcRenderer.send("store", { type: "set", path, value });
+        renderSend("store", [{ type: "set", path, value }]);
     },
     getAll: () => {
-        return ipcRenderer.sendSync("store", { type: "getAll" }) as setting;
+        return renderSendSync("store", [{ type: "getAll" }]) as setting;
     },
     setAll: (value: setting) => {
-        ipcRenderer.send("store", { type: "setAll", value });
+        renderSend("store", [{ type: "setAll", value }]);
     },
 };
 
