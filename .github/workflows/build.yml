@@ -1,8 +1,9 @@
 name: Build/release
 
+# 仅手动触发：本项目实际发布路径为 pnpm release（build:release + publish:r2
+# + deploy:site），不依赖 GitHub Actions 的 prerelease；6 平台矩阵构建成本高，
+# 不再随 push/tag 自动触发，避免浪费 CI 额度
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -47,5 +48,5 @@ jobs:
           draft: false
           prerelease: true
           generate_release_notes: true
-        # 不再引用未配置的 secrets.ACCESS_TOKEN：softprops/action-gh-release
+        # 不再引用仓库未配置的 Access Token secret：softprops/action-gh-release
         # 默认使用仓库自动提供的 ${{ github.token }}
